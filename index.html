@@ -1,0 +1,4481 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>나라장터 조달관 심사소 (PAPERS, KONEPS!)</title>
+<style>
+  :root {
+    --bg-dark: #1e2430;
+    --bg-panel: #272f3f;
+    --bg-desk: #4a3728;
+    --bg-desk-light: #3d2d20;
+    --paper-bg: #fbf8f1;
+    --paper-alt: #f4efe2;
+    --paper-ink: #2c2623;
+    --pixel-gold: #f5b932;
+    --pixel-green: #27ae60;
+    --pixel-red: #e04f44;
+    --pixel-blue: #3b82f6;
+    --pixel-cyan: #38bdf8;
+    --pixel-purple: #9b59b6;
+    --border-soft: #3d485e;
+  }
+
+  * {
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  canvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-dark);
+    color: #f1f5f9;
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .crt-overlay { display: none !important; }
+
+  .pixel-box {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  .pixel-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 13px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 13px;
+    color: #fff;
+    background: #384359;
+    border: 1px solid #52607c;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.15s, transform 0.08s;
+  }
+
+  .pixel-btn:hover {
+    filter: brightness(1.08);
+  }
+
+  .pixel-btn:active {
+    transform: translateY(1px);
+  }
+
+  .pixel-btn.gold { background: #d98a16; border-color: #f5b932; color: #fff; }
+  .pixel-btn.cyan { background: #1d6fa5; border-color: #56b4e9; }
+  .pixel-btn.green { background: #218c53; border-color: #52d68a; }
+  .pixel-btn.red { background: #c0392b; border-color: #f17a6e; }
+  .pixel-btn.active-tool {
+    background: #f5b932;
+    color: #1e2430;
+    border-color: #fff;
+  }
+
+  /* Header Bar */
+  header {
+    min-height: 60px;
+    background: #232a38;
+    border-bottom: 1px solid var(--border-soft);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 18px;
+    gap: 12px;
+    z-index: 20;
+    flex-shrink: 0;
+  }
+
+  .brand-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .badge-16bit {
+    background: #f5b932;
+    color: #1e2430;
+    font-weight: 800;
+    font-size: 12px;
+    padding: 4px 9px;
+    border-radius: 6px;
+  }
+
+  .game-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.3px;
+  }
+
+  .day-badge {
+    background: #313b4f;
+    border: 1px solid #4d5c78;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #f8fafc;
+  }
+
+  /* 4 Gauges Bar — Smooth, Single Continuous Bars (No 40 vertical segments!) */
+  .gauges-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .gauge-item {
+    background: #1a202c;
+    border: 1px solid #364156;
+    border-radius: 8px;
+    padding: 5px 10px;
+    min-width: 132px;
+  }
+
+  .gauge-head {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: #e2e8f0;
+  }
+
+  .gauge-bar-outer {
+    width: 100%;
+    height: 8px;
+    background: #2d3748;
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .gauge-fill-smooth {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.25s ease, background-color 0.25s ease;
+  }
+
+  .gauge-fill-smooth.budget { background: #f5b932; }
+  .gauge-fill-smooth.fairness { background: #38bdf8; }
+  .gauge-fill-smooth.innovation { background: #a855f7; }
+  .gauge-fill-smooth.safety { background: #22c55e; }
+  .gauge-fill-smooth.danger { background: #ef4444; }
+
+  .top-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  /* Main Layout Split: Upper Booth & Lower Desk */
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-rows: 42% 58%;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* UPPER BOOTH SECTION */
+  .booth-section {
+    position: relative;
+    background: #1b2230;
+    border-bottom: 2px solid #2e384d;
+    display: grid;
+    grid-template-columns: 1fr 370px;
+    overflow: hidden;
+  }
+
+  /* Left of Upper Booth: Canvas on top, Speech bar neatly below so character is NEVER covered! */
+  .canvas-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: #141923;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  #boothCanvas {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    object-fit: contain;
+    background: #182030;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  /* Speech Bubble Bar neatly docked at bottom of booth without covering character face/body */
+  .speech-overlay {
+    width: 100%;
+    background: #f8f4ea;
+    color: #26221e;
+    border-top: 2px solid #d4c9b4;
+    padding: 8px 16px;
+    min-height: 64px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    z-index: 10;
+    flex-shrink: 0;
+  }
+
+  .speech-speaker {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 800;
+    font-size: 13px;
+    color: #9c3b1b;
+    margin-bottom: 3px;
+  }
+
+  .speech-text {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.4;
+    color: #26221e;
+  }
+
+  /* Right Side AI Fairy Narae & Progress Monitor */
+  .narae-panel {
+    background: #232a3b;
+    border-left: 1px solid var(--border-soft);
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    justify-content: space-between;
+    overflow: hidden;
+  }
+
+  .narae-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #2c354a;
+    border: 1px solid #414f6e;
+    border-radius: 10px;
+    padding: 6px 10px;
+  }
+
+  #naraeCanvas {
+    width: 48px;
+    height: 48px;
+    background: #181f2e;
+    border: 1px solid #56b4e9;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+
+  .narae-title-box { flex: 1; }
+  .narae-name { font-size: 14px; font-weight: 800; color: #7dd3fc; }
+  .narae-sub { font-size: 11.5px; color: #cbd5e1; margin-top: 2px; }
+
+  .narae-advice-box {
+    flex: 1;
+    background: #1a202e;
+    border: 1px solid #354159;
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: #d1fae5;
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .policy-tag-pill {
+    display: inline-block;
+    background: rgba(56, 189, 248, 0.16);
+    border: 1px solid #38bdf8;
+    color: #bae6fd;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+    margin-bottom: 5px;
+  }
+
+  .queue-bar {
+    background: #2c354a;
+    border: 1px solid #414f6e;
+    border-radius: 8px;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 700;
+    color: #e2e8f0;
+  }
+
+  .queue-dots {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 800;
+    color: #f5b932;
+  }
+
+  /* LOWER DESK SECTION — Smooth Warm Wood without any stripes */
+  .desk-section {
+    position: relative;
+    background: #3d2f24;
+    display: grid;
+    grid-template-columns: 265px 1fr 295px;
+    gap: 14px;
+    padding: 12px 16px;
+    overflow: hidden;
+  }
+
+  /* Left Desk Column: Quick Rulebook + Pro Helper Menu neatly docked inside */
+  .desk-left {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  .mini-manual-card {
+    background: #2b3344;
+    border: 1px solid #45526d;
+    border-radius: 12px;
+    padding: 12px;
+    color: #f1f5f9;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+
+  .manual-title {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #f5b932;
+    border-bottom: 1px solid #414d66;
+    padding-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .rule-check-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 12.2px;
+    line-height: 1.48;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #e2e8f0;
+  }
+
+  .rule-check-list li {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 6px 9px;
+    transition: background-color 0.15s, border-color 0.15s;
+  }
+
+  .rule-check-list li.check-spot-item {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+
+  .rule-check-list li.check-spot-item:hover {
+    background: rgba(56, 189, 248, 0.14);
+    border-color: #38bdf8;
+  }
+
+  .rule-check-list li.check-spot-item.done-good {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: #22c55e;
+    color: #dcfce7;
+  }
+
+  .rule-check-list li.check-spot-item.done-bad {
+    background: rgba(239, 68, 68, 0.18);
+    border-color: #ef4444;
+    color: #fee2e2;
+  }
+
+  /* Center Desk: Official Bid Document & Certificate Papers */
+  .desk-center {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 12px;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  .paper-sheet {
+    position: relative;
+    background: var(--paper-bg);
+    color: var(--paper-ink);
+    border: 1px solid #d4cab8;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow-y: auto;
+  }
+
+  .paper-sheet.secondary {
+    background: var(--paper-alt);
+  }
+
+  .doc-header {
+    border-bottom: 2px solid #4a4238;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .doc-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #241f1c;
+  }
+
+  .doc-code {
+    font-size: 11px;
+    font-weight: 700;
+    background: #3b352e;
+    color: #f5b932;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+
+  .doc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .doc-table tr + tr {
+    border-top: 1px solid #e5dec9;
+  }
+
+  .doc-table th {
+    text-align: left;
+    padding: 7px 4px;
+    width: 33%;
+    color: #6b5e4c;
+    font-weight: 700;
+  }
+
+  .doc-table td {
+    padding: 7px 6px;
+    font-weight: 700;
+    color: #241f1c;
+    position: relative;
+  }
+
+  /* Inspectable Hotspot Fields — Soft Pill Buttons */
+  .inspect-spot {
+    position: relative;
+    padding: 4px 10px;
+    border: 1.5px solid #3b82f6;
+    background: #eff6ff;
+    color: #1d4ed8;
+    display: inline-block;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s, transform 0.1s, box-shadow 0.15s;
+  }
+
+  .inspect-spot::before {
+    content: "🔎 ";
+    font-size: 11px;
+  }
+
+  .inspect-spot:hover {
+    background: #dbeafe;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.22);
+  }
+
+  .inspect-spot.scanned-anomaly {
+    background: #fee2e2 !important;
+    border: 1.5px solid #ef4444 !important;
+    color: #991b1b !important;
+  }
+
+  .inspect-spot.scanned-anomaly::before {
+    content: "🚨 ";
+  }
+
+  .inspect-spot.scanned-valid {
+    background: #dcfce7 !important;
+    border: 1.5px solid #22c55e !important;
+    color: #166534 !important;
+  }
+
+  .inspect-spot.scanned-valid::before {
+    content: "✅ ";
+  }
+
+  .scan-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 6px;
+    margin-left: 6px;
+    border-radius: 4px;
+    vertical-align: middle;
+  }
+  .scan-badge.bad { background: #ef4444; color: #fff; }
+  .scan-badge.good { background: #22c55e; color: #fff; }
+
+  .doc-seal-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #d8cebe;
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b5e4c;
+  }
+
+  .pixel-seal-box {
+    width: 48px;
+    height: 48px;
+    border: 2px solid #d6453d;
+    border-radius: 6px;
+    color: #d6453d;
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    font-weight: 800;
+    text-align: center;
+    line-height: 1.15;
+    background: rgba(214, 69, 61, 0.07);
+    transform: rotate(-4deg);
+  }
+
+  /* Stamped Rubber Ink Result on Paper */
+  .rubber-ink-mark {
+    position: absolute;
+    top: 36%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-10deg) scale(1);
+    padding: 10px 24px;
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    border: 4px solid;
+    border-radius: 8px;
+    z-index: 35;
+    pointer-events: none;
+    opacity: 0;
+    background: rgba(255, 255, 255, 0.92);
+  }
+
+  .rubber-ink-mark.show-approve {
+    color: #15803d;
+    border-color: #15803d;
+    opacity: 0.96;
+    animation: inkSlam 0.22s ease-out forwards;
+  }
+
+  .rubber-ink-mark.show-reject {
+    color: #b91c1c;
+    border-color: #b91c1c;
+    opacity: 0.96;
+    animation: inkSlam 0.22s ease-out forwards;
+  }
+
+  @keyframes inkSlam {
+    0% { transform: translate(-50%, -50%) rotate(-10deg) scale(1.8); opacity: 0.2; }
+    100% { transform: translate(-50%, -50%) rotate(-10deg) scale(1); opacity: 0.96; }
+  }
+
+  /* Animated Stamp Piston from Top */
+  .stamp-piston {
+    position: absolute;
+    top: -220px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 136px;
+    height: 170px;
+    z-index: 50;
+    pointer-events: none;
+    transition: top 0.14s ease-out;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .stamp-piston.slamming { top: 24px; }
+
+  .stamp-handle {
+    width: 40px;
+    height: 85px;
+    background: #6b442a;
+    border: 2px solid #2b1a0e;
+    border-radius: 6px 6px 0 0;
+  }
+
+  .stamp-head {
+    width: 130px;
+    height: 50px;
+    background: #2f3640;
+    border: 2px solid #111;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    color: #f5b932;
+  }
+
+  /* Right Desk Column: AI Scanner & Stamp Controls */
+  .desk-right {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .tool-panel {
+    background: #2b3344;
+    border: 1px solid #45526d;
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+
+  .tool-panel-title {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #f5b932;
+    border-bottom: 1px solid #414d66;
+    padding-bottom: 5px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .lens-btn-big {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+    background: #1d6fa5;
+    border: 1px solid #56b4e9;
+    border-radius: 8px;
+    color: #fff;
+    font-family: inherit;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background-color 0.15s;
+  }
+
+  .lens-btn-big:hover { background: #2482c2; }
+
+  .lens-btn-big.active {
+    background: #f5b932;
+    color: #1e2430;
+    border-color: #fff;
+  }
+
+  .lens-log-box {
+    background: #1c222e;
+    border: 1px solid #354159;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12.2px;
+    line-height: 1.48;
+    color: #bae6fd;
+    min-height: 64px;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .stamp-buttons-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .stamp-action-btn {
+    height: 70px;
+    border: none;
+    border-radius: 10px;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 15px;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    transition: transform 0.08s, filter 0.15s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+  }
+
+  .stamp-action-btn:hover { filter: brightness(1.08); }
+  .stamp-action-btn:active { transform: translateY(2px); }
+  .stamp-action-btn.approve { background: #1e8e4e; }
+  .stamp-action-btn.reject { background: #c93429; }
+
+  /* Floating Magnifier Lens — Subtle, non-intrusive tooltip ring */
+  #pixelLens {
+    position: fixed;
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    border: 2.5px solid #f5b932;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+    pointer-events: none;
+    z-index: 9000;
+    display: none;
+    background: rgba(56, 189, 248, 0.05);
+    transform: translate(-50%, -50%);
+  }
+
+  body.lens-mode #pixelLens {
+    display: block;
+  }
+
+  .lens-hud-top, .lens-crosshair, .lens-hud-bottom {
+    display: none;
+  }
+
+  /* Modals */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 20, 30, 0.78);
+    z-index: 5000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .modal-backdrop.open { display: flex; }
+
+  .modal-card {
+    background: #252d3d;
+    border: 1px solid #4a5878;
+    border-radius: 16px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+    max-width: 760px;
+    width: 100%;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .modal-head {
+    background: #1d2432;
+    border-bottom: 1px solid #38435c;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 17px;
+    font-weight: 800;
+    color: #f5b932;
+  }
+
+  .modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .modal-foot {
+    padding: 12px 20px;
+    background: #1d2432;
+    border-top: 1px solid #38435c;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .codex-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .codex-item {
+    background: #1c222f;
+    border: 1px solid #364159;
+    border-radius: 10px;
+    padding: 14px;
+  }
+
+  .codex-item h4 {
+    margin: 0 0 6px 0;
+    color: #7dd3fc;
+    font-size: 14.5px;
+  }
+
+  .codex-item p {
+    margin: 0;
+    font-size: 13px;
+    color: #cbd5e1;
+  }
+
+  .delta-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 12px 0;
+  }
+
+  .delta-chip {
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-weight: 800;
+    font-size: 13px;
+  }
+  .delta-chip.pos { background: #1e8e4e; color: #fff; }
+  .delta-chip.neg { background: #c93429; color: #fff; }
+
+  /* Tactile Game-Feel Animations: Paper Slide, Stamp Thud, UV Seal, Floating Score Popups */
+  @keyframes docSlideIn {
+    0% { opacity: 0; transform: translateY(-22px) scale(0.97); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .paper-sheet.slide-in {
+    animation: docSlideIn 0.28s cubic-bezier(0.2, 0.85, 0.3, 1) forwards;
+  }
+
+  @keyframes deskThud {
+    0% { transform: translate(0, 0); }
+    25% { transform: translate(-3px, 4px); }
+    50% { transform: translate(3px, -2px); }
+    75% { transform: translate(-2px, 2px); }
+    100% { transform: translate(0, 0); }
+  }
+  .desk-center.stamp-shake {
+    animation: deskThud 0.18s ease-out;
+  }
+
+  .pixel-seal-box {
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, background-color 0.15s;
+  }
+  .pixel-seal-box:hover {
+    transform: rotate(0deg) scale(1.06);
+  }
+  .pixel-seal-box.uv-good {
+    border-color: #16a34a !important;
+    color: #15803d !important;
+    background: #dcfce7 !important;
+    box-shadow: 0 0 12px rgba(34, 197, 94, 0.45);
+  }
+  .pixel-seal-box.uv-bad {
+    border-color: #dc2626 !important;
+    color: #991b1b !important;
+    background: #fee2e2 !important;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+  }
+
+  .float-popup {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9500;
+    font-weight: 900;
+    font-size: 15px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(20, 26, 38, 0.92);
+    border: 1.5px solid #f5b932;
+    color: #fde047;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    animation: floatUpFade 1.05s ease-out forwards;
+  }
+  @keyframes floatUpFade {
+    0% { opacity: 0; transform: translate(-50%, 6px) scale(0.85); }
+    20% { opacity: 1; transform: translate(-50%, -4px) scale(1.04); }
+    100% { opacity: 0; transform: translate(-50%, -38px) scale(0.96); }
+  }
+
+  .rank-exp-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #1f293d;
+    border: 1px solid #f5b932;
+    color: #fef08a;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .special-event-box {
+    margin-top: 6px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .special-event-box.show {
+    display: flex;
+  }
+  .special-event-box.bribe {
+    background: rgba(220, 38, 38, 0.18);
+    border: 1px solid #ef4444;
+    color: #fecaca;
+  }
+  .special-event-box.fasttrack {
+    background: rgba(37, 99, 235, 0.18);
+    border: 1px solid #3b82f6;
+    color: #bfdbfe;
+  }
+
+  .inspect-spot.hint-pulse {
+    background: #fef9c3 !important;
+    border-color: #eab308 !important;
+    color: #854d0e !important;
+    box-shadow: 0 0 0 3px rgba(245, 185, 50, 0.45);
+  }
+
+  .history-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+    gap: 10px;
+  }
+
+  .history-card {
+    background: #1c222f;
+    border: 1px solid #364159;
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.1s;
+  }
+  .history-card:hover {
+    border-color: #f5b932;
+    transform: translateY(-1px);
+  }
+  .history-card.done-ok { border-left: 4px solid #22c55e; }
+  .history-card.done-err { border-left: 4px solid #ef4444; }
+
+  #demoBanner {
+    position: fixed;
+    top: 66px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #f5b932;
+    color: #1e2430;
+    border-radius: 999px;
+    padding: 6px 18px;
+    font-weight: 800;
+    font-size: 13px;
+    z-index: 4000;
+    display: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  @media (max-width: 1080px) {
+    html, body { height: auto !important; min-height: 100vh !important; overflow-y: auto !important; overflow-x: hidden !important; }
+    header { height: auto !important; flex-wrap: wrap !important; padding: 10px 12px !important; gap: 10px !important; }
+    .gauges-wrap { flex-wrap: wrap !important; width: 100% !important; gap: 8px !important; }
+    .gauge-item { flex: 1 1 45% !important; min-width: 130px !important; }
+    main { display: flex !important; flex-direction: column !important; height: auto !important; overflow: visible !important; }
+    .booth-section { grid-template-columns: 1fr !important; height: auto !important; overflow: visible !important; }
+    .canvas-container { min-height: 250px !important; }
+    .narae-panel { border-left: none !important; border-top: 1px solid var(--border-soft) !important; }
+    .desk-section { grid-template-columns: 1fr !important; height: auto !important; overflow: visible !important; padding: 12px !important; }
+    .desk-center { grid-template-columns: 1fr !important; order: -1; }
+    .codex-grid { grid-template-columns: 1fr !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- CRT overlay removed for clean, warm eye-friendly pixel clarity -->
+<div id="demoBanner">🎬 [1분 자동 시연 모드 작동 중] AI 돋보기 정밀 스캔 → 도장 자동 심사 시연 (클릭 시 수동 전환)</div>
+
+<!-- Floating Pixel Magnifier Lens -->
+<div id="pixelLens">
+  <div class="lens-hud-top">KONEPS AI-LENS v2.6</div>
+  <div class="lens-crosshair"></div>
+  <div class="lens-hud-bottom" id="lensHudText">서류 항목 위에 렌즈를 대고 클릭하세요</div>
+</div>
+
+<!-- TOP HEADER -->
+<header>
+  <div class="brand-area">
+    <span class="badge-16bit">16-BIT</span>
+    <div class="game-title">나라장터 조달관 심사소</div>
+    <div class="day-badge" id="dayStageBadge" style="display:none;">DAY 1 / 5</div>
+    <select id="caseJumpSelect" class="day-badge" style="cursor:pointer; font-family:inherit; outline:none;" onchange="loadCase(parseInt(this.value, 10))" title="원하는 일차·안건으로 바로 이동">
+      <option value="0">DAY 1-1 · 스마트 가로등 (전자서명)</option>
+      <option value="1">DAY 1-2 · 사무용 가구 (동일IP 담합)</option>
+      <option value="2">DAY 1-3 · 화재감지 센서 (벤처나라)</option>
+      <option value="3">DAY 2-1 · 교육용 태블릿 (택갈이 적발)</option>
+      <option value="4">DAY 2-2 · 어린이집 세제 (위조 성적서)</option>
+      <option value="5">DAY 2-3 · 무장애 민원대 (우수조달·장애인기업)</option>
+      <option value="6">DAY 3-1 · 자율주행 탐지로봇 (혁신시제품)</option>
+      <option value="7">DAY 3-2 · 행정포털 클라우드 (전관 브로커)</option>
+      <option value="8">DAY 3-3 · 보이스피싱 탐지 AI (디지털서비스몰)</option>
+      <option value="9">DAY 4-1 · 산불 진화드론 (재난 긴급조달)</option>
+      <option value="10">DAY 4-2 · 구호 방진마스크 (재난 폭리·불량)</option>
+      <option value="11">DAY 4-3 · 알루미늄 80톤 (공공비축 방출)</option>
+      <option value="12">DAY 5-1 · 해수담수화 모듈 (G-PASS 해외진출)</option>
+      <option value="13">DAY 5-2 · 어린이 체육센터 (페이퍼컴퍼니)</option>
+      <option value="14">DAY 5-3 · AI 스마트 방재망 (최종 마스터 심사)</option>
+    </select>
+  </div>
+
+  <!-- 4 Core National Gauges -->
+  <div class="gauges-wrap">
+    <div class="gauge-item">
+      <div class="gauge-head"><span>💰 국가예산</span><span id="val-budget">75</span></div>
+      <div class="gauge-bar-outer" id="bar-budget"></div>
+    </div>
+    <div class="gauge-item">
+      <div class="gauge-head"><span>⚖️ 공정지수</span><span id="val-fairness">75</span></div>
+      <div class="gauge-bar-outer" id="bar-fairness"></div>
+    </div>
+    <div class="gauge-item">
+      <div class="gauge-head"><span>🚀 혁신성장</span><span id="val-innovation">70</span></div>
+      <div class="gauge-bar-outer" id="bar-innovation"></div>
+    </div>
+    <div class="gauge-item">
+      <div class="gauge-head"><span>🛡️ 국민안전</span><span id="val-safety">80</span></div>
+      <div class="gauge-bar-outer" id="bar-safety"></div>
+    </div>
+  </div>
+
+  <div class="top-actions">
+    <button class="pixel-btn cyan" id="btnBgm" onclick="toggleBGM()">🎵 8-BIT BGM: OFF</button>
+    <button class="pixel-btn gold" onclick="openCodexModal()">📘 조달청 정책 법전</button>
+    <button class="pixel-btn green" id="btnAutoDemo" onclick="toggleAutoDemo()">🎬 1분 자동 시연 모드</button>
+  </div>
+</header>
+<!-- Pro Sub-Toolbar with Live Judge Rank & EXP -->
+<div id="koneps-pro-dock">
+  <span class="rank-exp-pill" id="judgeRankPill" title="서류 스캔·직인 감식·심문·정확한 도장 판정으로 EXP를 모아 승진하세요!">🎖️ Lv.1 수습 조달주사보 (EXP 0/100)</span>
+  <button class="kpro-btn" onclick="KonepsPro.openIntro()" title="게임 소개 및 플레이 가이드 열기">🏠 게임안내</button>
+  <button class="kpro-btn" onclick="openStoryModal()" style="border-color:#38bdf8; color:#bae6fd;" title="DAY 1 ~ DAY 5 스토리 에피소드 브리핑 열람">🎬 일차스토리</button>
+  <button class="kpro-btn" onclick="openCastModal()" style="border-color:#f472b6; color:#fbcfe8;" title="등장인물 6인 서사 연대기 및 카르텔 검거 현황">🎭 인물·서사도감</button>
+  <button class="kpro-btn" onclick="openHistoryModal()" title="15개 조달 안건 심사 판정 기록장 및 즉시 이동">📒 심사기록장</button>
+  <button class="kpro-btn quiz-highlight" id="kpro-quiz-btn" onclick="KonepsPro.openQuiz()" title="조달청 정책 퀴즈 풀고 특별 보너스 받기!">🎓 조달골든벨(보너스)</button>
+  <button class="kpro-btn" onclick="KonepsPro.openCertificate()" title="조달청 AI 명예 인증서 이미지 발급">🏅 인증서발급</button>
+  <button class="kpro-btn" id="kpro-rec-btn" onclick="KonepsPro.toggleRecording()" title="공모전 제출용 1분 시연영상 녹화">🔴 시연녹화</button>
+  <button class="kpro-btn" onclick="restartGame()" title="진행 기록을 초기화하고 DAY 1부터 새로 시작">🔄 처음부터</button>
+  <button class="kpro-btn" onclick="KonepsPro.toggleFullscreen()" title="전체화면 전환">⛶ 전체화면</button>
+</div>
+
+<!-- MAIN WORKSPACE -->
+<main>
+  <!-- UPPER: PIXEL BOOTH WINDOW & NARAE AI FAIRY -->
+  <section class="booth-section">
+    <div class="canvas-container">
+      <!-- Low-res 320x140 authentic pixel canvas scaled up -->
+      <canvas id="boothCanvas" width="320" height="140" onclick="handleBoothCanvasClick(event)" style="cursor:pointer;" title="👤입찰자 클릭: 심문(Q) | 🔔데스크 벨 클릭: 호출벨 타종 | 🆗🆖창구 인주 클릭: 즉시 날인"></canvas>
+
+      <div class="speech-overlay">
+        <div class="speech-speaker">
+          <div style="display:flex; flex-direction:column; gap:1px;">
+            <span id="storyArcBadge" onclick="openCastModal()" style="cursor:pointer; font-size:11px; font-weight:800; color:#b45309; background:#fef3c7; border:1px solid #f59e0b; padding:1px 7px; border-radius:99px; display:inline-block; width:fit-content;" title="클릭하여 등장인물 서사 연대기 보기">🔧 [김정직 연대기 1/3] 성실한 국내 제조장인의 첫 입찰</span>
+            <div>
+              <span id="speakerName">👤 입찰 참가자</span>
+              <span id="speakerOrg" style="color:#4b3f72; margin-left:8px; font-size:12px;">소속 기업명</span>
+            </div>
+          </div>
+          <div style="display:flex; gap:5px;">
+            <button class="pixel-btn cyan" style="padding:3px 8px; font-size:11.5px;" onclick="openCastModal()" title="이 인물의 배경 서사와 연대기 보기">🎭 인물정보</button>
+            <button class="pixel-btn gold" style="padding:3px 10px; font-size:12px;" onclick="interrogateApplicant()" title="입찰자에게 직접 추궁/질문하기 (단축키 Q)">💬 입찰자 심문 (Q)</button>
+          </div>
+        </div>
+        <div class="speech-text" id="speechBubbleText">
+          "심사관님, 이번 공공조달 입찰 서류 제출합니다. 잘 부탁드립니다!"
+        </div>
+      </div>
+    </div>
+
+    <!-- Right AI Assistant Fairy Panel -->
+    <aside class="narae-panel">
+      <div class="narae-header">
+        <canvas id="naraeCanvas" width="32" height="32"></canvas>
+        <div class="narae-title-box">
+          <div class="narae-name">🧚 AI 보좌관 ‘나래’</div>
+          <div class="narae-sub">차세대 나라장터 지능형 이상징후 분석기</div>
+        </div>
+      </div>
+
+      <div class="narae-advice-box">
+        <div>
+          <span class="policy-tag-pill" id="naraePolicyTag">차세대 나라장터</span>
+          <div id="naraeHintText" style="margin-top:4px;">
+            서류의 파란색 🔎 항목을 직접 클릭하거나 [⚡ AI 일괄 스캔 (S)]을 눌러 진위를 판독해 보세요!
+          </div>
+          <!-- Interactive Mid-Case Dilemma / Special Action Banner -->
+          <div class="special-event-box" id="specialEventBox">
+            <span id="specialEventText">돌발 이벤트</span>
+            <button class="pixel-btn gold" id="specialEventBtn" style="padding:4px 8px; font-size:11.5px; white-space:nowrap;" onclick="triggerSpecialAction()">발동</button>
+          </div>
+        </div>
+        <div style="border-top: 1px solid #354159; padding-top:6px; font-size:11.5px; font-weight:700; color:#f5b932;" id="scanProgressText">
+          🔎 AI 돋보기 스캔 진행률: 0 / 2 항목 확인됨
+        </div>
+      </div>
+
+      <div class="queue-bar">
+        <span>심사 현황</span>
+        <div class="queue-dots" id="dayQueueDots"></div>
+      </div>
+    </aside>
+  </section>
+
+  <!-- LOWER: WOODEN DOCUMENT DESK -->
+  <section class="desk-section">
+    <!-- Left Desk: Dynamic Case Verification Checklist -->
+    <div class="desk-left">
+      <div class="mini-manual-card">
+        <div class="manual-title">
+          <span>📋 실시간 서류 검증 체크리스트</span>
+          <span id="currentDayThemeBadge" style="font-size:11px; color:#fff;">DAY 1</span>
+        </div>
+        <ul class="rule-check-list" id="deskRuleList">
+          <!-- Dynamically populated per case -->
+        </ul>
+      </div>
+    </div>
+
+    <!-- Center Desk: 2 Pixel Paper Sheets + Stamp Animation -->
+    <div class="desk-center" id="paperDeskArea">
+      <!-- Stamp Piston Element -->
+      <div class="stamp-piston" id="stampPiston">
+        <div class="stamp-handle"></div>
+        <div class="stamp-head" id="stampPistonHead">KONEPS STAMP</div>
+      </div>
+
+      <!-- Rubber Ink Stamp Overlay -->
+      <div class="rubber-ink-mark" id="rubberInkMark">승인 허가</div>
+
+      <!-- Left Sheet: Official Bid Application -->
+      <div class="paper-sheet" id="mainBidSheet">
+        <div>
+          <div class="doc-header">
+            <div class="doc-title">📄 나라장터 전자입찰 참가신청서</div>
+            <div class="doc-code" id="docBidNo">KONEPS-2026-001</div>
+          </div>
+          <table class="doc-table" id="docMainTable">
+            <!-- Dynamically populated with inspectable spots -->
+          </table>
+        </div>
+        <div class="doc-seal-row">
+          <div>제출기관: 조달청 전자조달심사국 귀중 <span style="font-size:11px; color:#2563eb;">(우측 직인 클릭 시 UV 감식)</span></div>
+          <div class="pixel-seal-box" id="docSealBox" onclick="verifySealUV()" title="클릭하여 블록체인 UV 직인 진위 감식 (단축키 U)">조달입찰<br>공식직인</div>
+        </div>
+      </div>
+
+      <!-- Right Sheet: Supporting Verification Certificate -->
+      <div class="paper-sheet secondary" id="subCertSheet">
+        <div>
+          <div class="doc-header">
+            <div class="doc-title" id="subCertTitle">📑 직접생산·기술인증 확인서</div>
+            <div class="doc-code" id="subCertCode">CERT-VERIFIED</div>
+          </div>
+          <table class="doc-table" id="docSubTable">
+            <!-- Dynamically populated with inspectable spots -->
+          </table>
+        </div>
+        <div class="doc-seal-row">
+          <div id="subCertFooterNote">차세대 나라장터 블록체인 진위검증 연동</div>
+          <div style="font-size:11px; color:#2c3e50; font-weight:900;">[AI-CROSSCHECK]</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Desk: AI Magnifier & Rubber Stamps -->
+    <div class="desk-right">
+      <div class="tool-panel">
+        <div class="tool-panel-title">
+          <span>🔍 AI 조달 판독 장비</span>
+          <span id="lensStateLabel" style="color:#48dbfb;">직접클릭 가능</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px;">
+          <button class="lens-btn-big" id="btnToggleLens" onclick="toggleLensMode()" style="font-size:11.5px; padding:8px 4px;" title="마우스 돋보기 렌즈 켜기/끄기 (단축키 F)">
+            🔍 돋보기(F)
+          </button>
+          <button class="lens-btn-big" id="btnUvSeal" onclick="verifySealUV()" style="font-size:11.5px; padding:8px 4px; background:#6d28d9; border-color:#a78bfa;" title="전자직인 블록체인 UV 위조 감식 (단축키 U)">
+            🔦 직인감식(U)
+          </button>
+          <button class="lens-btn-big" onclick="scanAllSpotsInstant()" style="font-size:11.5px; padding:8px 4px; background:#218c53; border-color:#52d68a;" title="서류의 모든 단서 한 번에 스캔 (단축키 S)">
+            ⚡ 일괄스캔(S)
+          </button>
+        </div>
+
+        <div class="lens-log-box" id="lensLogBox">
+          ▶ 돋보기를 활성화한 뒤 서류의 파란 점선 항목을 클릭하면 위조 직인, 담합 IP, 혁신 인증 마크의 진위가 밝혀집니다!
+        </div>
+
+        <div class="stamp-buttons-grid">
+          <button class="stamp-action-btn approve" id="btnApprove" onclick="handleDecision(true)" onmouseenter="highlightUnscannedSpots(true)" onmouseleave="highlightUnscannedSpots(false)">
+            <span style="font-size:22px;">🆗</span>
+            <span>승인 도장</span>
+            <span style="font-size:11px; color:#d4f8e8;">APPROVE (A)</span>
+          </button>
+          <button class="stamp-action-btn reject" id="btnReject" onclick="handleDecision(false)" onmouseenter="highlightUnscannedSpots(true)" onmouseleave="highlightUnscannedSpots(false)">
+            <span style="font-size:22px;">🆖</span>
+            <span>반려 도장</span>
+            <span style="font-size:11px; color:#ffd6d6;">REJECT (R)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- MODAL 1: PPS PIXEL POLICY CODEX (조달청 도트 법전) -->
+<div class="modal-backdrop" id="codexModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span>📘 조달청 정책 법전 (PPS PUBLIC PROCUREMENT CODEX)</span>
+      <button class="pixel-btn red" onclick="closeCodexModal()">닫기 ✖</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-top:0; color:#ffd03b; font-weight:900;">
+        ※ 심사관은 아래 6대 조달청 핵심 정책 기준에 따라 서류를 정밀 검증하고 [승인] 또는 [반려] 도장을 찍어야 합니다.
+      </p>
+      <div class="codex-grid">
+        <div class="codex-item">
+          <h4>1. 🌐 차세대 나라장터 (KONEPS AI·빅데이터)</h4>
+          <p>연간 200조 원 규모의 국가 종합전자조달 플랫폼. AI 이상징후 탐지로 동일 IP/MAC 대리 투찰, 위조 전자서명, 페이퍼컴퍼니를 실시간 색출합니다.</p>
+        </div>
+        <div class="codex-item">
+          <h4>2. ⚖️ 공정조달 & 직접생산 확인제</h4>
+          <p>중소기업자간 경쟁제품을 낙찰받은 뒤 해외 저가품 상표만 바꿔 납품하는 ‘택갈이(직접생산 위반)’ 및 ‘입찰담합(짬짜미)’은 즉시 반려·제재 대상입니다.</p>
+        </div>
+        <div class="codex-item">
+          <h4>3. 🚀 혁신장터 & 혁신시제품 시범구매</h4>
+          <p>상용화 전 단계의 우수 혁신제품을 조달청 예산으로 첫 구매자가 되어 공공기관 실증을 지원하는 제도. 기술인증이 확인된 혁신제품은 적극 승인합니다.</p>
+        </div>
+        <div class="codex-item">
+          <h4>4. 🌱 벤처나라 & 사회적 약자기업 우대</h4>
+          <p>창업·벤처기업의 공공조달 판로 개척 전용 몰(벤처나라) 지정 기업, 녹색인증 친환경 기업 등을 지원하되, 허위 인증서 도용은 철저히 가려냅니다.</p>
+        </div>
+        <div class="codex-item">
+          <h4>5. 🛡️ 재난 긴급조달 & 공공비축 원자재 방출</h4>
+          <p>산불·수해 등 국가 재난 시 긴급수의계약 패스트트랙을 가동하고, 알루미늄·구리·리튬 등 6대 비철금속 및 전략 원자재를 중소기업에 할인 방출합니다.</p>
+        </div>
+        <div class="codex-item">
+          <h4>6. ✈️ G-PASS (해외조달시장 진출 유망기업)</h4>
+          <p>국내 조달 납품 실적이 우수한 강소기업을 G-PASS로 지정하여 UN, 미국 연방조달, 개도국 전자조달 수출까지 글로벌 성장을 견인합니다.</p>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="pixel-btn gold" onclick="closeCodexModal()">법전 숙지 완료</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 1.5: AUDIT HISTORY STAMP LOGBOOK (조달 심사 판정 기록장) -->
+<div class="modal-backdrop" id="historyModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span>📒 나라장터 조달 심사 판정 기록장 (DAY 1 ~ DAY 5 전체 15안건)</span>
+      <button class="pixel-btn red" onclick="closeHistoryModal()">닫기 ✖</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-top:0; color:#cbd5e1; font-size:13px;">
+        ※ 각 안건 카드를 클릭하면 해당 심사 스테이지로 즉시 이동하여 재심사하거나 시연할 수 있습니다. (진행 상황은 브라우저에 자동 저장됩니다)
+      </p>
+      <div class="history-grid" id="historyGridBody"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="pixel-btn red" onclick="restartGame(); closeHistoryModal();">🔄 기록 전체 초기화</button>
+      <button class="pixel-btn gold" onclick="closeHistoryModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 1.6: DAILY STORY EPISODE CUTSCENE (일차별 서사 에피소드 모달) -->
+<div class="modal-backdrop" id="storyModal">
+  <div class="modal-card" style="max-width:720px;">
+    <div class="modal-head">
+      <span id="storyModalAct">🎬 ACT 1 · 신임 조달관의 첫 출근과 검은 그림자</span>
+      <button class="pixel-btn red" onclick="closeStoryModal()">닫기 ✖</button>
+    </div>
+    <div class="modal-body" id="storyModalBody">
+      <!-- Dynamic Story Chapter Content -->
+    </div>
+    <div class="modal-foot" style="justify-content:space-between; flex-wrap:wrap;">
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <button class="pixel-btn" onclick="openStoryModal(1)" style="padding:4px 9px; font-size:11.5px;">DAY 1</button>
+        <button class="pixel-btn" onclick="openStoryModal(2)" style="padding:4px 9px; font-size:11.5px;">DAY 2</button>
+        <button class="pixel-btn" onclick="openStoryModal(3)" style="padding:4px 9px; font-size:11.5px;">DAY 3</button>
+        <button class="pixel-btn" onclick="openStoryModal(4)" style="padding:4px 9px; font-size:11.5px;">DAY 4</button>
+        <button class="pixel-btn" onclick="openStoryModal(5)" style="padding:4px 9px; font-size:11.5px;">DAY 5</button>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="pixel-btn cyan" onclick="closeStoryModal(); openCastModal();">🎭 등장인물 도감</button>
+        <button class="pixel-btn gold" onclick="closeStoryModal()">심사 창구로 출근하기 ▶</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 1.7: CHARACTER & NARRATIVE ARC DOSSIER (등장인물 & 서사 관계도 도감) -->
+<div class="modal-backdrop" id="castModal">
+  <div class="modal-card" style="max-width:820px;">
+    <div class="modal-head">
+      <span>🎭 등장인물 & 서사 연대기 도감 (기업 성장 사다리 vs 검은 그림자 카르텔)</span>
+      <button class="pixel-btn red" onclick="closeCastModal()">닫기 ✖</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-top:0; color:#fde047; font-size:13px; font-weight:800;">
+        ※ 이 게임의 15개 안건은 단발성 심사가 아니라, 청년창업가 ‘이초롱’과 제조장인 ‘김정직’의 성장 서사, 그리고 불공정 브로커 조직 ‘검은 그림자 카르텔(총책 구전관)’과의 5일간의 대결로 긴밀하게 연결되어 있습니다!
+      </p>
+      <div class="codex-grid" id="castGridBody"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="pixel-btn cyan" onclick="closeCastModal(); openStoryModal();">🎬 일차별 스토리 보기</button>
+      <button class="pixel-btn gold" onclick="closeCastModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 2: CASE DECISION FEEDBACK & ENDING MODAL -->
+<div class="modal-backdrop" id="feedbackModal">
+  <div class="modal-card">
+    <div class="modal-head" id="fbModalHead">
+      <span>⚖️ 조달 심사 판정 결과</span>
+    </div>
+    <div class="modal-body" id="fbModalBody">
+      <!-- Dynamic Feedback Content -->
+    </div>
+    <div class="modal-foot" id="fbModalFoot">
+      <button class="pixel-btn gold" id="btnNextCase" onclick="proceedNextCase()">다음 입찰자 호출 ▶</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   1. 15 PIXEL PROCUREMENT CASES DATA (DAY 1 ~ DAY 5, 3 CASES PER DAY)
+   ============================================================================ */
+const STORY_CHAPTERS = {
+  1: {
+    act: "ACT 1 · 신임 조달관의 첫 출근과 검은 그림자",
+    title: "🌅 DAY 1 아침 브리핑 : “연간 200조 원, 나라장터의 문지기가 되다”",
+    speaker: "👨‍💼 강원칙 공정조달국장 & 🧚 AI 보좌관 나래",
+    dialogue: [
+      "👨‍💼 강원칙 국장: “자네가 오늘 새로 부임한 심사관인가! 우리 조달청 심사 창구는 국민 세금 200조 원을 지키는 최전선일세.”",
+      "🧚 AI 나래: “심사관님, 반가워요! 최근 퇴직 브로커 ‘구전관’이 이끄는 [검은 그림자 카르텔]이 유령회사와 담합 IP로 공공입찰을 노리고 있다는 첩보가 들어왔어요!”",
+      "👨‍💼 강원칙 국장: “반대로 실적은 없지만 기술력이 뛰어난 청년 창업가 ‘이초롱’이나 성실한 제조장인 ‘김정직’ 같은 기업에겐 우리가 든든한 성장 사다리가 되어주어야 하네. 첫날 심사를 시작하게!”"
+    ],
+    objective: "🎯 DAY 1 목표: 성실 제조기업(김정직) 승인 · 카르텔 담합 행동대장(박짬짜) 적발 · 청년창업가(이초롱)의 ‘벤처나라’ 첫걸음 지원"
+  },
+  2: {
+    act: "ACT 2 · 카르텔의 위장 침투 (택갈이와 위조 성적서)",
+    title: "🌅 DAY 2 아침 브리핑 : “국산의 탈을 쓴 유령공장을 색출하라!”",
+    speaker: "👨‍💼 강원칙 공정조달국장 & 🧚 AI 보좌관 나래",
+    dialogue: [
+      "🧚 AI 나래: “심사관님! 어제 우리가 담합 브로커 박짬짜를 적발하자, [검은 그림자 카르텔]이 수법을 바꿨어요!”",
+      "👨‍💼 강원칙 국장: “해외 저가 완제품을 수입해 라벨만 국산으로 바꾸는 ‘택갈이’ 업자 최택갈과, 어린이집 세제 시험성적서를 포토샵으로 위조한 오세척이 창구로 오고 있다네.”",
+      "🧚 AI 나래: “공장 전력량(kWh)과 QR 원본 성적서를 돋보기로 스캔하면 100% 잡아낼 수 있어요! 오후엔 장애인 표준사업장 ‘정희망’ 대표님의 우수조달물품 심사도 예정되어 있답니다.”"
+    ],
+    objective: "🎯 DAY 2 목표: 카르텔의 ‘택갈이(직접생산 위반)’ 및 ‘위조 친환경 성적서’ 철퇴 · 사회적 약자기업 우수조달물품 승인"
+  },
+  3: {
+    act: "ACT 3 · 성장 사다리의 기적과 보스 ‘구전관’의 등장",
+    title: "🌅 DAY 3 아침 브리핑 : “혁신장터로 자라난 새싹, 그리고 거물 로비스트의 압박”",
+    speaker: "🌱 이초롱 대표 & 🕶️ 구전관 카르텔 총책",
+    dialogue: [
+      "🌱 이초롱 대표 (메시지): “심사관님! DAY 1에 벤처나라 화재센서를 승인해 주신 덕분에 연구개발에 성공해, 오늘 [혁신시제품 시범구매] 자율주행 로봇으로 다시 찾아뵙게 되었어요!”",
+      "👨‍💼 강원칙 국장: “허허, 벤처나라 새싹이 혁신장터로 무럭무럭 자랐구먼! 그런데 긴장하게. 부하들이 연달아 적발되자 카르텔 총책인 전관 브로커 ‘구전관’이 직접 창구에 나타났네!”",
+      "🧚 AI 나래: “구전관 고문이 인맥 과시와 뒷돈 청탁으로 무자격 수의계약을 강요할 거예요. 절대 흔들리지 마시고 [🚓 청탁 거절·감찰드론 호출]로 정의를 보여주세요!”"
+    ],
+    objective: "🎯 DAY 3 목표: 이초롱 대표의 2단계 도약(혁신시제품 시범구매) 승인 · 카르텔 보스 ‘구전관’의 전관 로비 적발"
+  },
+  4: {
+    act: "ACT 4 · 동해안 대형 산불 발발과 공급망 비상령",
+    title: "🚨 DAY 4 긴급 브리핑 : “산불 재난 코드 레드! 골든타임과 공급망을 사수하라”",
+    speaker: "🚒 송긴급 재난대응본부장 & 🔧 김정직 대표",
+    dialogue: [
+      "🚒 송긴급 본부장: “비상입니다 심사관님! 동해안에 대형 산불이 번지고 있습니다! 일반 입찰 공고를 기다릴 시간이 없습니다. 조달청 [긴급조달 패스트트랙]을 가동해 주십시오!”",
+      "🧚 AI 나래: “이런 국가적 재난 와중에도 카르텔 잔당 ‘왕폭리’가 폐기 처분된 불량 마스크를 4배 폭리로 팔아먹으려 접근 중이에요! 철저히 차단해야 해요!”",
+      "🔧 김정직 대표 (긴급요청): “심사관님, DAY 1에 뵈었던 김정직입니다! 국제 알루미늄 가격 폭등으로 한전 변압기 납품 공장이 멈출 위기입니다. 조달청 군산 비축기지 원자재 긴급방출을 부탁드립니다!”"
+    ],
+    objective: "🎯 DAY 4 목표: 산불 진화드론 긴급조달 패스트트랙 승인 · 재난 폭리꾼 차단 · 김정직 대표에게 공공비축 알루미늄 80톤 방출"
+  },
+  5: {
+    act: "ACT 5 (FINAL) · 세계로 뻗는 G-PASS와 마스터 조달관의 대단원",
+    title: "🌟 DAY 5 최종 브리핑 : “창업에서 G-PASS 수출까지, 우리가 만든 K-조달의 미래!”",
+    speaker: "🌱 이초롱 대표 · 🔧 김정직 대표 · 👨‍💼 강원칙 국장",
+    dialogue: [
+      "🌱 이초롱 대표: “심사관님! 벤처나라(DAY 1)와 혁신장터(DAY 3)를 거쳐, 드디어 오늘 [G-PASS 해외조달시장 진출 유망기업] 지정 심사를 받으러 왔습니다! UN 조달시장에 K-기술을 수출할게요!”",
+      "🧚 AI 나래: “정말 감동이에요! 하지만 카르텔의 마지막 잔당 ‘마하청’이 88억 어린이 체육센터 공사에 유령기술자 페이퍼컴퍼니로 최후의 한탕을 노리고 있으니 끝까지 방심은 금물이에요!”",
+      "🔧 김정직 대표: “그리고 마지막 15번째 안건은 저 김정직과 이초롱 대표, 한클라우드 대표가 함께 결성한 [K-스마트조달 상생 컨소시엄]의 국가 AI 방재망 사업입니다! 공정한 최종 심사를 부탁드립니다!”"
+    ],
+    objective: "🎯 DAY 5 목표: 이초롱 대표의 G-PASS 글로벌 진출 달성 · 카르텔 최후의 페이퍼컴퍼니 박멸 · 상생 컨소시엄 최종 마스터 결재"
+  }
+};
+
+const CHARACTER_DOSSIERS = [
+  {
+    id: "chorong",
+    name: "🌱 이초롱 청년창업가",
+    role: "네오센서랩 & 아쿠아퓨어텍 대표 (조달 성장 사다리 주인공)",
+    badge: "성장 사다리 3단계",
+    appearCases: [2, 6, 12],
+    desc: "창업 2년 차 납품실적 0건의 작은 연구소에서 출발해, 심사관의 공정한 심사와 조달청의 [벤처나라(Day 1) → 혁신장터 시범구매(Day 3) → G-PASS 해외진출(Day 5)] 제도를 발판 삼아 글로벌 유니콘으로 성장하는 핵심 인물입니다."
+  },
+  {
+    id: "jeongjik",
+    name: "🔧 김정직 대표",
+    role: "(주)한빛스마트조명 · 대한전력부품 대표 (성실 제조장인)",
+    badge: "직접생산 & 공공비축",
+    appearCases: [0, 11, 14],
+    desc: "30년간 국내 공장을 묵묵히 지켜온 성실한 중소 제조장인. Day 1 스마트 가로등 적격 심사를 통과하고, Day 4 글로벌 알루미늄 폭등 위기를 조달청 [공공비축 긴급방출]로 극복한 뒤, Day 5에 이초롱 대표와 함께 상생 컨소시엄을 이끌고 돌아옵니다."
+  },
+  {
+    id: "cartel",
+    name: "🕶️ 구전관 & 검은 그림자 카르텔",
+    role: "불공정 조달 브로커 조직 (메인 빌런 일당 6인)",
+    badge: "중점 단속 대상",
+    appearCases: [1, 3, 4, 7, 10, 13],
+    desc: "퇴직 로비스트 ‘구전관(Day 3-2)’을 정점으로, 동일IP 담합(박짬짜), 해외 저가품 택갈이(최택갈), 성적서 위조(오세척), 재난 폭리(왕폭리), 페이퍼컴퍼니 불법하도급(마하청)까지 온갖 편법으로 국고를 노리는 범죄 카르텔입니다."
+  },
+  {
+    id: "song",
+    name: "🚒 송긴급 본부장",
+    role: "중앙재난안전대책본부 산림재난특수진화단장",
+    badge: "재난 긴급조달",
+    appearCases: [9],
+    desc: "동해안 대형 산불 현장에서 국민의 생명을 지키기 위해 창구로 달려온 지휘관. 조달청의 [긴급조달 패스트트랙(입찰공고 단축·긴급수의계약)]을 통해 야간 열화상 진화드론 20기를 즉시 투입합니다."
+  },
+  {
+    id: "hope_cloud",
+    name: "🤝 정희망 & 한클라우드 대표",
+    role: "장애인 표준사업장 다함께데스크 · 보안클라우드코리아",
+    badge: "사회적가치 & 디지털조달",
+    appearCases: [5, 8, 14],
+    desc: "중증장애인 근로자 35명과 함께 우수조달물품 무장애 민원대를 만드는 ‘정희망’ 대표와, CSAP 보안인증 AI 보이스피싱 탐지 SaaS를 공급하는 ‘한클라우드’ 대표입니다."
+  },
+  {
+    id: "narae_kang",
+    name: "🧚 AI 보좌관 나래 & 👨‍💼 강원칙 국장",
+    role: "차세대 나라장터 AI 분석관 & 조달청 공정조달국장",
+    badge: "심사관 멘토단",
+    appearCases: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+    desc: "심사관(플레이어)의 든든한 파트너! 나래는 블록체인·빅데이터 이상징후를 실시간 브리핑하고, 강원칙 국장은 외압을 막아주며 5일간의 성장을 이끌어 줍니다."
+  }
+];
+
+const CASES_DATA = [
+  // -------------------- DAY 1: 차세대 나라장터 & 기본 자격 검증 --------------------
+  {
+    day: 1,
+    caseNo: "KONEPS-2026-101",
+    charId: "jeongjik",
+    storyArcTag: "🔧 [김정직 연대기 1/3] 성실한 국내 제조장인의 첫 입찰",
+    policyTag: "차세대 나라장터 · 전자서명 검증",
+    skyMode: "day",
+    charType: "ceo_suit",
+    speakerName: "김정직 대표",
+    speakerOrg: "(주)한빛스마트조명",
+    speech: "반갑습니다 신임 심사관님! 국내 공장에서 직접 만든 고효율 스마트 가로등 입찰서입니다. 블록체인 전자직인까지 정식 날인했습니다!",
+    naraeHint: "[인물 서사] 30년 외길 제조장인 김정직 대표님의 첫 심사예요! 파란색 [🔎 항목]과 우측 하단 직인을 클릭해 정식 적격 기업인지 확인하세요.",
+    shouldApprove: true,
+    mainFields: [
+      { label: "입찰건명", text: "2026 행복시 고효율 스마트 LED 가로등 납품", spot: false },
+      { label: "투찰금액", text: "1억 8,500만 원 (예정가격 대비 88.2%)", spot: false },
+      { label: "전자서명 토큰", text: "KONEPS-BC-9981A (유효)", spot: true, isBad: false, scanMsg: "✅ 차세대 나라장터 블록체인 공인 토큰 일치" },
+      { label: "투찰 접속 IP", text: "211.45.108.22 (자사 고정 IP)", spot: true, isBad: false, scanMsg: "✅ 단독 정상 접속 IP 확인됨" }
+    ],
+    subTitle: "📑 중소기업 직접생산확인증명서",
+    subCode: "SMPP-2026-OK",
+    subFields: [
+      { label: "생산품목", text: "LED 가로등기구 (세부품명번호 3911160302)", spot: false },
+      { label: "공장가동률", text: "스마트 계량기 전력 검침 정상 (84%)", spot: true, isBad: false, scanMsg: "✅ 실제 국내 공장 제조 가동 확인" },
+      { label: "유효기간", text: "2025.03.01 ~ 2027.02.28 (정상)", spot: false }
+    ],
+    sealText: "한빛조명\n정식직인",
+    deltasApprove: { budget: +5, fairness: +6, innovation: +4, safety: +4 },
+    deltasReject:  { budget: -6, fairness: -8, innovation: -4, safety: -2 },
+    explainRight: "정식 블록체인 전자서명과 직접생산확인서를 갖춘 김정직 대표의 모범 중소기업입니다! (김정직 대표는 DAY 4 공급망 위기 때 다시 등장합니다)",
+    explainWrong: "적격 중소기업의 정상 입찰서를 반려하여 지역 인프라 개선이 지연되었습니다."
+  },
+  {
+    day: 1,
+    caseNo: "KONEPS-2026-102",
+    charId: "cartel",
+    storyArcTag: "🕶️ [검은 그림자 카르텔 1/6] 행동대장 박짬짜의 동일 IP 담합",
+    policyTag: "공정조달 · 입찰담합(동일 IP) 적발",
+    skyMode: "day",
+    charType: "shady_broker",
+    speakerName: "박짬짜 브로커 (카르텔 행동대장)",
+    speakerOrg: "(주)대박유통 & 형제상사",
+    speech: "크흠, 우리 ‘구전관 고문님’께서 잘 봐달라고 하셨는데... 저희는 경쟁사끼리 공정하게 투찰했습죠! 얼른 승인 도장만 찍어주십쇼, 헤헤...",
+    naraeHint: "[카르텔 경보] ‘검은 그림자 카르텔’의 첫 번째 첩자예요! 눈빛이 흔들리고 있어요. 돋보기로 [투찰 접속 IP]와 [AI 담합지수]를 스캔하세요!",
+    shouldApprove: false,
+    mainFields: [
+      { label: "입찰건명", text: "공공청사 사무용 가구 연간 단가계약", spot: false },
+      { label: "투찰금액", text: "4억 9,900만 원 (투찰률 99.8% 근접)", spot: false },
+      { label: "투찰 접속 IP", text: "192.168.0.44 (경쟁사 3곳 동일 IP!)", spot: true, isBad: true, scanMsg: "🚨 [담합 적발] 들러리 2개 업체와 동일 PC·IP에서 대리 투찰!" },
+      { label: "법인 대표자", text: "박짬짜 (경쟁사 감사와 동일 주소지)", spot: true, isBad: true, scanMsg: "🚨 [친인척 위장] 페이퍼컴퍼니 중복 입찰 확인!" }
+    ],
+    subTitle: "📑 청렴계약 이행각서",
+    subCode: "CHECK-ALERT",
+    subFields: [
+      { label: "담합여부 서약", text: "본 입찰에 담합 사실이 없음을 서약함", spot: false },
+      { label: "AI 담합지수", text: "위험도 98.4% (낙찰하한가 담합 패턴)", spot: true, isBad: true, scanMsg: "🚨 차세대 나라장터 AI 담합경보 시스템 적색 경보!" },
+      { label: "제출일자", text: "2026.10.18 (마감 3초 전 동시 투찰)", spot: false }
+    ],
+    sealText: "대박유통\n임시직인",
+    deltasApprove: { budget: -14, fairness: -18, innovation: -4, safety: 0 },
+    deltasReject:  { budget: +8, fairness: +10, innovation: +2, safety: +2 },
+    explainRight: "카르텔 행동대장 박짬짜의 동일 IP 대리 투찰(짬짜미)을 완벽히 적발했습니다! 박짬짜는 ‘보스 구전관 고문이 복수할 것’이라며 도망쳤습니다.",
+    explainWrong: "검은 그림자 카르텔의 동일 IP 담합 브로커를 승인하여 공정지수와 국가예산이 크게 추락했습니다!"
+  },
+  {
+    day: 1,
+    caseNo: "KONEPS-2026-103",
+    charId: "chorong",
+    storyArcTag: "🌱 [이초롱 성장사다리 1/3] 창업 2년 차, 벤처나라 첫 도전!",
+    policyTag: "벤처나라 · 창업기업 초기 판로",
+    skyMode: "sunset",
+    charType: "youth_founder",
+    speakerName: "이초롱 청년창업가",
+    speakerOrg: "네오센서랩 (창업 2년차 스타트업)",
+    speech: "안녕하세요 심사관님! 창업 2년 차라 기존 공공 납품실적은 0건이지만, 밤새 개발한 센서로 조달청 ‘벤처나라’ 지정 인증을 받았습니다! 첫 기회를 주세요!",
+    naraeHint: "[성장 사다리 1단계] 주인공 이초롱 대표님의 첫 등장이에요! 납품실적이 0건이어도 [벤처나라 지정증서]가 있으면 특례 승인이 가능해요!",
+    shouldApprove: true,
+    mainFields: [
+      { label: "입찰건명", text: "전통시장 화재감지 IoT 무선센서 시범설치", spot: false },
+      { label: "투찰금액", text: "6,200만 원 (창업·벤처기업 전용 트랙)", spot: false },
+      { label: "기존 납품실적", text: "공공 납품 0건 (벤처나라 특례 면제)", spot: true, isBad: false, scanMsg: "✅ 벤처나라 지정 물품은 초기 납품실적 제한 면제 대상!" },
+      { label: "기술개발 인력", text: "청년 엔지니어 8명 전원 국내 연구소 근무", spot: false }
+    ],
+    subTitle: "📑 조달청 벤처나라 지정증서",
+    subCode: "VENTURE-2026-77",
+    subFields: [
+      { label: "지정번호", text: "제2026-VN-0412호 (우수 창업·벤처상품)", spot: true, isBad: false, scanMsg: "✅ 조달청 벤처나라 공식 등록 기술우수 상품 확인" },
+      { label: "성능시험", text: "한국소방산업기술원(KFI) 감도 시험 통과", spot: true, isBad: false, scanMsg: "✅ KFI 정식 시험성적서 진위 일치" },
+      { label: "추천기관", text: "중소벤처기업부·조달청 공동 추천", spot: false }
+    ],
+    sealText: "네오센서\n창업직인",
+    deltasApprove: { budget: +4, fairness: +5, innovation: +10, safety: +6 },
+    deltasReject:  { budget: -2, fairness: -6, innovation: -12, safety: -6 },
+    explainRight: "실적 장벽에 막힌 청년 창업가 이초롱 대표에게 ‘벤처나라’로 첫 공공판로를 열어주었습니다! 이초롱 대표는 DAY 3에 더 놀라운 혁신기술로 돌아옵니다!",
+    explainWrong: "벤처나라 특례 대상인 이초롱 대표의 스타트업을 실적 미달로 오인 반려하여 청년 창업 성장 사다리가 끊겼습니다."
+  },
+
+  // -------------------- DAY 2: 직접생산 위반(택갈이) & 위조 성적서 단속 --------------------
+  {
+    day: 2,
+    caseNo: "KONEPS-2026-201",
+    charId: "cartel",
+    storyArcTag: "🕶️ [검은 그림자 카르텔 2/6] 유령공장장 최택갈의 해외저가품 ‘택갈이’",
+    policyTag: "공정조달 · 직접생산 위반(택갈이) 적발",
+    skyMode: "day",
+    charType: "shady_broker",
+    speakerName: "최택갈 대표 (카르텔 밀수책)",
+    speakerOrg: "(주)국산인척전자",
+    speech: "어제 박짬짜가 당했다지? 흥, 내 서류는 완벽해! 학교에 들어갈 교육용 태블릿 1,000대, 파주 공장에서 직접 만들었으니 도장이나 찍으시지!",
+    naraeHint: "[카르텔 2차 공격] 중소기업자간 경쟁제품은 반드시 국내 공장에서 직접 생산해야 해요! [파주공장 전력량]과 [관세청 통관기록]을 스캔하세요!",
+    shouldApprove: false,
+    mainFields: [
+      { label: "입찰건명", text: "초·중등학교 디지털 교실 교육용 태블릿 보급", spot: false },
+      { label: "계약방식", text: "중소기업자간 경쟁제품 (직접생산 의무)", spot: false },
+      { label: "파주공장 전력량", text: "최근 6개월 월평균 전력 사용량 12kWh (가동 0%)", spot: true, isBad: true, scanMsg: "🚨 [유령공장 적발] 기계 가동 흔적 전무 (단순 라벨갈이 창고)" },
+      { label: "관세청 연계기록", text: "입찰 3일 전 완제품 1,000대 수입 통관!", spot: true, isBad: true, scanMsg: "🚨 [택갈이 적발] 해외 저가 완제품 수입 후 원산지 라벨만 교체!" }
+    ],
+    subTitle: "📑 직접생산확인 증명서",
+    subCode: "SMPP-EXPIRED",
+    subFields: [
+      { label: "생산설비 현황", text: "SMT 칩마운터 2대 보유 신고 (실사 결과 임대 반납)", spot: true, isBad: true, scanMsg: "🚨 생산설비 무단 처분·하청 위장 납품 확인" },
+      { label: "유효기간", text: "2023.01.01 ~ 2025.12.31 (기간 만료!)", spot: true, isBad: true, scanMsg: "🚨 증명서 유효기간이 이미 만료되었습니다!" }
+    ],
+    sealText: "국산인척\n법인인감",
+    deltasApprove: { budget: -12, fairness: -16, innovation: -8, safety: -6 },
+    deltasReject:  { budget: +6, fairness: +10, innovation: +4, safety: +4 },
+    explainRight: "해외 저가 완제품의 라벨만 바꿔 국산 직접생산품으로 속이는 카르텔 밀수책 최택갈의 ‘택갈이’ 수법을 통쾌하게 적발했습니다!",
+    explainWrong: "유령공장 택갈이 업체를 통과시켜 정직하게 공장을 돌리는 김정직 대표 같은 국내 제조 기업들이 큰 피해를 입었습니다!"
+  },
+  {
+    day: 2,
+    caseNo: "KONEPS-2026-202",
+    charId: "cartel",
+    storyArcTag: "🕶️ [검은 그림자 카르텔 3/6] 문서위조책 오세척의 가짜 친환경 인증서",
+    policyTag: "녹색조달 · 친환경 인증서 위조 적발",
+    skyMode: "day",
+    charType: "ceo_suit",
+    speakerName: "오세척 대표 (카르텔 문서위조책)",
+    speakerOrg: "클린케미칼(주)",
+    speech: "어린이집 급식실에 납품할 친환경 세제입니다. 구전관 고문님 지시로 환경표지 인증 마크를 아주 선명하게... 아니, 정식으로 받아왔습니다!",
+    naraeHint: "[카르텔 3차 공격] 말실수로 ‘구전관 고문’ 이름을 흘렸어요! [환경표지 번호]와 [형광증백제 검출] 항목을 돋보기로 정밀 대조하세요!",
+    shouldApprove: false,
+    mainFields: [
+      { label: "입찰건명", text: "전국 국공립 어린이집 친환경 주방세제 공급", spot: false },
+      { label: "녹색제품 가점", text: "환경표지 인증 가점 +5점 신청", spot: false },
+      { label: "환경표지 번호", text: "EL-109-99999 (포토샵 픽셀 깨짐 흔적)", spot: true, isBad: true, scanMsg: "🚨 [인증서 위조] 환경산업기술원 DB에 존재하지 않는 허위 번호!" },
+      { label: "형광증백제 검출", text: "원본 시험서: 검출(부적합) → 사본: 불검출로 개조", spot: true, isBad: true, scanMsg: "🚨 [시험성적서 위변조] QR 원본 대조 결과 유해성분 기준치 초과!" }
+    ],
+    subTitle: "📑 시험성적서 및 녹색인증서",
+    subCode: "FAKE-QR-99",
+    subFields: [
+      { label: "발급기관 검증", text: "한국화학융합시험연구원(KTR) 진위확인 불일치", spot: true, isBad: true, scanMsg: "🚨 차세대 나라장터 e-시험성적서 자동연계 대조 불일치!" },
+      { label: "납품 대상", text: "전국 영유아 보육시설 1,400개소", spot: false }
+    ],
+    sealText: "클린케미\n위조직인",
+    deltasApprove: { budget: -8, fairness: -14, innovation: -4, safety: -20 },
+    deltasReject:  { budget: +5, fairness: +8, innovation: +2, safety: +10 },
+    explainRight: "차세대 나라장터 e-시험성적서 원본 대조로 카르텔의 포토샵 위조 성적서를 적발해 전국 어린이집 안전 사고를 막아냈습니다!",
+    explainWrong: "위조된 유해 세제 성적서를 승인하여 국민안전과 공정지수가 심각하게 훼손되었습니다!"
+  },
+  {
+    day: 2,
+    caseNo: "KONEPS-2026-203",
+    charId: "hope_cloud",
+    storyArcTag: "🤝 [따뜻한 동행 1/2] 정희망 대표의 장애인 표준사업장 우수조달물품",
+    policyTag: "우수조달물품 · 장애인 표준사업장",
+    skyMode: "sunset",
+    charType: "youth_founder",
+    speakerName: "정희망 대표",
+    speakerOrg: "사회적기업 (주)다함께데스크",
+    speech: "중증장애인 기술자 35명이 정성껏 제작한 높이조절 무장애 민원실 책상입니다. 특허 기술로 조달청 우수조달물품 지정도 받았습니다!",
+    naraeHint: "[사회적 가치 조달] 사회적 약자기업이자 특허 기술력을 갖춘 조달청 우수조달물품인지 돋보기로 검증해 따뜻한 공공구매를 실현하세요!",
+    shouldApprove: true,
+    mainFields: [
+      { label: "입찰건명", text: "전국 주민센터 휠체어 겸용 스마트 민원대 보급", spot: false },
+      { label: "조달 우대자격", text: "조달청 우수조달물품 + 장애인 표준사업장", spot: true, isBad: false, scanMsg: "✅ 고용노동부 및 조달청 공식 등록 자격 정상" },
+      { label: "특허 기술", text: "특허 제10-2481920호 (끼임방지 AI 센서 데스크)", spot: true, isBad: false, scanMsg: "✅ 특허청 등록 원부 및 성능인증(EPC) 일치" },
+      { label: "투찰가격", text: "2억 4,000만 원 (적정 단가 검증 완료)", spot: false }
+    ],
+    subTitle: "📑 조달청 우수조달물품 지정증서",
+    subCode: "EXCELLENT-2026",
+    subFields: [
+      { label: "지정번호", text: "제2026045호 (품질보증조달물품 A등급)", spot: true, isBad: false, scanMsg: "✅ 조달청 품질관리단 현장 실사 A등급 통과" },
+      { label: "직접생산 검증", text: "자체 목공·금속 가공 라인 100% 가동 중", spot: false }
+    ],
+    sealText: "다함께\n공식직인",
+    deltasApprove: { budget: +5, fairness: +8, innovation: +7, safety: +6 },
+    deltasReject:  { budget: -4, fairness: -10, innovation: -6, safety: -6 },
+    explainRight: "기술력과 사회적 가치를 겸비한 정희망 대표의 우수조달물품·장애인 표준사업장을 승인하여 따뜻한 공공조달을 실현했습니다!",
+    explainWrong: "완벽한 자격을 갖춘 사회적기업 우수조달물품을 반려하여 공공조달의 사회적 가치 실현 기회를 놓쳤습니다."
+  },
+
+  // -------------------- DAY 3: 혁신장터 시범구매 & 카르텔 총책 구전관의 등장 --------------------
+  {
+    day: 3,
+    caseNo: "KONEPS-2026-301",
+    charId: "chorong",
+    storyArcTag: "🌱 [이초롱 성장사다리 2/3] 벤처나라를 넘어 ‘혁신시제품 시범구매’로!",
+    policyTag: "혁신장터 · 혁신시제품 시범구매 사업",
+    skyMode: "day",
+    charType: "youth_founder",
+    speakerName: "이초롱 대표 (네오센서랩 · 2단계 도약)",
+    speakerOrg: "(주)네오센서 로보틱스",
+    speech: "심사관님! DAY 1에 벤처나라 화재센서를 승인해 주신 덕분에 연구진을 충원해 ‘지하공동구 자율주행 재난탐지 로봇’을 개발했습니다! 조달청 혁신시제품 시범구매로 첫 실증 기회를 주세요!",
+    naraeHint: "[성장 사다리 2단계] DAY 1의 청년창업가 이초롱 대표님이 신기술을 개발해 돌아왔어요! 조달청이 첫 구매자가 되어주는 [혁신장터 시범구매] 대상인지 확인하세요!",
+    shouldApprove: true,
+    mainFields: [
+      { label: "사업구분", text: "조달청 혁신시제품 시범구매 (공공기관 테스트베드)", spot: false },
+      { label: "시범구매 금액", text: "3억 1,000만 원 (조달청 시범구매 전용 예산)", spot: true, isBad: false, scanMsg: "✅ 조달청 혁신시제품 지정 및 시범구매 예산 배정 확인" },
+      { label: "혁신성 평가", text: "국가연구개발 우수성과 100선 & 혁신제품 지정", spot: true, isBad: false, scanMsg: "✅ 과기정통부·조달청 혁신성 심의 위원회 만장일치 통과" },
+      { label: "실증 수요기관", text: "서울시설공단 지하공동구 관리소", spot: false }
+    ],
+    subTitle: "📑 조달청 혁신제품 지정 인증서",
+    subCode: "INNO-KONEPS-01",
+    subFields: [
+      { label: "패스트트랙 트랙", text: "트랙1 (정부 R&D 우수성과 혁신제품)", spot: true, isBad: false, scanMsg: "✅ 수의계약 특례 및 구매담당자 적극행정 면책 적용 대상!" },
+      { label: "안전성 검증", text: "방폭 설계 인증(KCs) 완료", spot: false }
+    ],
+    sealText: "네오센서\n혁신직인",
+    deltasApprove: { budget: +4, fairness: +5, innovation: +14, safety: +9 },
+    deltasReject:  { budget: -3, fairness: -5, innovation: -15, safety: -8 },
+    explainRight: "벤처나라에서 출발한 이초롱 대표의 기업이 조달청 ‘혁신시제품 시범구매’를 통해 공공 테스트베드 실증까지 성공했습니다! 이제 DAY 5에는 해외수출(G-PASS)에 도전합니다!",
+    explainWrong: "혁신시제품 시범구매 제도의 취지를 살리지 못하고 이초롱 대표의 국산 재난로봇 실증을 반려해 버렸습니다."
+  },
+  {
+    day: 3,
+    caseNo: "KONEPS-2026-302",
+    charId: "cartel",
+    storyArcTag: "🕶️ [검은 그림자 카르텔 4/6] 보스 ‘구전관 고문’의 직접 등판과 로비 협박",
+    policyTag: "공정조달 · 퇴직공무원 전관예우 브로커 적발",
+    skyMode: "day",
+    charType: "shady_broker",
+    speakerName: "구전관 총책 (검은 그림자 카르텔 보스)",
+    speakerOrg: "(주)로비스트컨설팅",
+    speech: "에헴! 자네가 내 수하들(박짬짜·최택갈·오세척)을 다 반려시킨 겁 없는 신임 심사관인가? 내가 왕년에 국장님이랑 호형호제하던 사람인데, 기술점수 미달인 건 눈감고 수의계약으로 도장 찍게!",
+    naraeHint: "[보스전 경보] 드디어 검은 그림자 카르텔의 수장 ‘구전관’이 직접 나타났어요! 스캔 후 [🚓 청탁 거절·고발] 버튼을 눌러 감찰드론을 출동시키세요!",
+    shouldApprove: false,
+    mainFields: [
+      { label: "입찰건명", text: "차세대 행정포털 클라우드 전환 구축 사업", spot: false },
+      { label: "요구 계약방식", text: "특명 수의계약 (법적 근거 없음!)", spot: true, isBad: true, scanMsg: "🚨 [불법 수의계약] 국가계약법상 경쟁입찰 대상 사업임!" },
+      { label: "기술능력 평가", text: "61.5점 (적격심사 통과 기준 85점 미달!)", spot: true, isBad: true, scanMsg: "🚨 [기술점수 미달] 클라우드 보안 인증(CSAP) 미보유 업체!" },
+      { label: "특이사항", text: "심사위원 명단 사전 로비 및 부당 청탁 로그 탐지", spot: true, isBad: true, scanMsg: "🚨 [청탁금지법 위반] 공정조달 감찰팀 즉시 체포 대상!" }
+    ],
+    subTitle: "📑 기술적격 및 보안인증 내역",
+    subCode: "CSAP-MISSING",
+    subFields: [
+      { label: "클라우드 보안인증", text: "미취득 (추후 취득 예정 각서만 첨부)", spot: true, isBad: true, scanMsg: "🚨 공공 클라우드 필수 보안인증 누락" },
+      { label: "전문인력 보유", text: "개발자 1명 (나머지 12명 불법 외주 하도급 예정)", spot: false }
+    ],
+    sealText: "로비스트\n청탁직인",
+    deltasApprove: { budget: -12, fairness: -20, innovation: -8, safety: -10 },
+    deltasReject:  { budget: +6, fairness: +12, innovation: +4, safety: +6 },
+    explainRight: "카르텔 보스 구전관의 전관예우 압박과 뒷돈 유혹을 단호히 뿌리치고 반려 처분하여 조달청의 정의와 공정지수를 드높였습니다!",
+    explainWrong: "카르텔 보스 구전관의 협박에 굴복해 무자격 청탁 업체를 승인하여 공정지수가 치명타를 입었습니다!"
+  },
+  {
+    day: 3,
+    caseNo: "KONEPS-2026-303",
+    charId: "hope_cloud",
+    storyArcTag: "🤝 [따뜻한 동행 2/2] 한클라우드 대표의 디지털서비스몰 AI 보안 SaaS",
+    policyTag: "디지털서비스몰 · AI SaaS 카탈로그 계약",
+    skyMode: "night",
+    charType: "ceo_suit",
+    speakerName: "한클라우드 대표",
+    speakerOrg: "(주)보안클라우드코리아",
+    speech: "방금 구전관 브로커가 나가는 걸 봤습니다. 저희는 정정당당하게 KISA 보안인증(CSAP)을 획득하고 조달청 디지털서비스몰에 등록한 ‘AI 보이스피싱 탐지 클라우드’입니다!",
+    naraeHint: "[디지털 조달 혁신] 구전관의 무자격 업체와 달리, 정식 CSAP 보안인증과 조달청 디지털서비스몰 심의를 통과한 우량 기업인지 스캔해 보세요!",
+    shouldApprove: true,
+    mainFields: [
+      { label: "입찰건명", text: "지자체 콜센터 AI 악성민원·피싱 실시간 보호 서비스", spot: false },
+      { label: "조달플랫폼", text: "조달청 디지털서비스몰 카탈로그 계약", spot: true, isBad: false, scanMsg: "✅ 디지털서비스 전문계약제도 심의 통과 정식 서비스" },
+      { label: "클라우드 보안", text: "KISA 클라우드 보안인증(CSAP) 표준 등급 보유", spot: true, isBad: false, scanMsg: "✅ 공공기관용 CSAP 보안인증 유효 확인" },
+      { label: "이용요금", text: "월 구독형 2,800만 원 (조달청 단가 검증 완료)", spot: false }
+    ],
+    subTitle: "📑 디지털서비스 선정 확인서",
+    subCode: "CLOUD-CSAP-OK",
+    subFields: [
+      { label: "가용성 SLA", text: "99.95% 무중단 백업 아키텍처 검증", spot: true, isBad: false, scanMsg: "✅ 국가정보자원관리원 연계 기준 충족" },
+      { label: "AI 윤리검증", text: "개인정보 비식별화 필터 탑재 완료", spot: false }
+    ],
+    sealText: "보안클라\n정식직인",
+    deltasApprove: { budget: +6, fairness: +5, innovation: +10, safety: +8 },
+    deltasReject:  { budget: -4, fairness: -5, innovation: -10, safety: -8 },
+    explainRight: "구전관의 불법 로비를 막아낸 자리에 정식 보안인증을 갖춘 한클라우드 대표의 AI SaaS를 도입하여 공공 클라우드 보안과 보이스피싱 예방을 달성했습니다!",
+    explainWrong: "검증된 디지털서비스몰 AI 보안 솔루션을 반려하여 디지털 전환이 지체되었습니다."
+  },
+
+  // -------------------- DAY 4: 국가 재난 긴급조달 & 공공비축 원자재 긴급방출 --------------------
+  {
+    day: 4,
+    caseNo: "KONEPS-2026-401",
+    charId: "song",
+    storyArcTag: "🚒 [국가 재난 비상령] 송긴급 본부장의 산불 진화드론 긴급조달!",
+    policyTag: "긴급조달 · 대형 산불 진화드론 패스트트랙",
+    skyMode: "wildfire",
+    charType: "emergency_chief",
+    speakerName: "송긴급 재난대응본부장",
+    speakerOrg: "산림재난특수진화단 & (주)스카이드론",
+    speech: "🚨 긴급상황입니다 심사관님! 창밖을 보십시오! 동해안 대형 산불이 민가로 번지고 있습니다! 야간 열화상 진화드론 20기 긴급조달 패스트트랙 승인을 요청합니다!",
+    naraeHint: "[코드 레드] 창밖 도트 하늘이 산불로 붉게 타오르고 있어요! 단서 스캔 후 [⚡ 직권 패스트트랙]과 [🆗 승인 도장]으로 골든타임을 사수하세요!",
+    shouldApprove: true,
+    mainFields: [
+      { label: "긴급건명", text: "[재난긴급] 산불 야간 화선 탐지 및 소화탄 투하 드론 20기", spot: false },
+      { label: "조달절차", text: "조달청 긴급조달 패스트트랙 (공고 5일 단축·수의계약)", spot: true, isBad: false, scanMsg: "✅ 국가계약법 시행령 제26조 재난 긴급수의계약 요건 충족!" },
+      { label: "즉시납품 재고", text: "국내 창고 완제품 20기 즉시 현장 출동 대기 중", spot: true, isBad: false, scanMsg: "✅ 조달청 혁신제품 지정 및 국산 부품률 92% 실물 확인!" },
+      { label: "납품금액", text: "4억 2,000만 원 (조달청 등록 정찰 단가)", spot: false }
+    ],
+    subTitle: "📑 재난관리책임기관 긴급조달 요청서",
+    subCode: "SOS-FASTTRACK",
+    subFields: [
+      { label: "재난선포 단계", text: "중앙재난안전대책본부 산불 ‘심각’ 단계 발령", spot: true, isBad: false, scanMsg: "✅ 중대본 공식 재난 긴급조달 공문 수신 확인" },
+      { label: "비행안전 인증", text: "항공안전기술원 야간 강풍 비행 테스트 통과", spot: false }
+    ],
+    sealText: "산림재난\n긴급직인",
+    deltasApprove: { budget: +5, fairness: +6, innovation: +9, safety: +16 },
+    deltasReject:  { budget: -8, fairness: -6, innovation: -6, safety: -24 },
+    explainRight: "촌각을 다투는 산불 위기 속에서 조달청 긴급조달 패스트트랙을 즉각 가동해 진화드론 20기를 투입, 동해안 산림과 국민의 생명을 지켜냈습니다!",
+    explainWrong: "산불 재난 긴급조달을 반려하여 진화 골든타임을 놓치고 국민안전이 급락했습니다!"
+  },
+  {
+    day: 4,
+    caseNo: "KONEPS-2026-402",
+    charId: "cartel",
+    storyArcTag: "🕶️ [검은 그림자 카르텔 5/6] 재난 사재기꾼 왕폭리의 불량 구호마스크",
+    policyTag: "재난 악용 · 폭리·불량 구호물품 브로커 차단",
+    skyMode: "wildfire",
+    charType: "shady_broker",
+    speakerName: "왕폭리 대표 (카르텔 사재기꾼)",
+    speakerOrg: "(주)한탕물산",
+    speech: "산불 연기 때문에 대피소에서 마스크가 급하다면서요? 구전관 고문님이 확보해 둔 창고 물량인데, 부르는 게 값이지! 정가 4배에 검수 없이 바로 넘기겠소!",
+    naraeHint: "[카르텔 재난 악용] 산불 재난까지 돈벌이로 악용하는 카르텔 잔당이에요! [청구단가]와 [식약처 KF 허가]를 스캔해 즉시 고발·반려하세요!",
+    shouldApprove: false,
+    mainFields: [
+      { label: "입찰건명", text: "산불 피해 이재민 긴급 구호 방진마스크 10만 장", spot: false },
+      { label: "청구단가", text: "장당 12,000원 (평시 조달단가 대비 420% 폭리!)", spot: true, isBad: true, scanMsg: "🚨 [재난 폭리 적발] 조달청 물가정보 시스템 기준 단가 4배 초과!" },
+      { label: "품질상태", text: "폐업 창고 5년 방치 공업용 먼지마스크 (유통기한 경과)", spot: true, isBad: true, scanMsg: "🚨 [불량 구호품] 식약처 KF94 인증 취소 및 필터 변질 확인!" },
+      { label: "납품이력", text: "과거 수해 구호품 지연 납품으로 부정당업자 제재 전력", spot: false }
+    ],
+    subTitle: "📑 보건용 마스크 품목허가증",
+    subCode: "REVOKED-KF",
+    subFields: [
+      { label: "식약처 허가", text: "제2019-000호 (2024년 행정처분 취소됨!)", spot: true, isBad: true, scanMsg: "🚨 분진포집효율 미달로 품목허가 취소된 제품!" },
+      { label: "보관창고", text: "무허가 비닐하우스 습기 노출 보관", spot: false }
+    ],
+    sealText: "한탕물산\n사기직인",
+    deltasApprove: { budget: -18, fairness: -15, innovation: -4, safety: -18 },
+    deltasReject:  { budget: +10, fairness: +10, innovation: +2, safety: +10 },
+    explainRight: "산불 재난을 틈타 유통기한 지난 불량 마스크로 4배 폭리를 취하려던 카르텔의 왕폭리를 단호히 반려하고 부정당업자로 영구 퇴출했습니다!",
+    explainWrong: "재난 폭리·불량 마스크를 승인하여 이재민 건강 위협과 막대한 예산 낭비를 초래했습니다!"
+  },
+  {
+    day: 4,
+    caseNo: "KONEPS-2026-403",
+    charId: "jeongjik",
+    storyArcTag: "🔧 [김정직 연대기 2/3] 글로벌 원자재 폭등 위기와 조달청 공공비축 방출",
+    policyTag: "공공비축 · 전략 원자재(알루미늄) 긴급방출",
+    skyMode: "sunset",
+    charType: "ceo_suit",
+    speakerName: "김정직 대표 (한빛조명·대한전력부품)",
+    speakerOrg: "(주)대한전력부품 (강소 제조기업)",
+    speech: "심사관님, DAY 1에 가로등 심사를 받았던 김정직입니다! 글로벌 공급망 위기로 알루미늄 값이 폭등해 산불 복구용 변압기 공장이 멈출 위기입니다. 조달청 비축 알루미늄 긴급방출을 신청합니다!",
+    naraeHint: "[김정직 대표의 재방문] 성실한 제조기업 김정직 대표님이 원자재 위기에 처하셨어요! 조달청 [공공비축 원자재 방출] 적격 요건을 스캔해 공장을 지켜주세요!",
+    shouldApprove: true,
+    mainFields: [
+      { label: "신청건명", text: "조달청 군산 비축기지 알루미늄 괴(Ingot) 80톤 방출 신청", spot: false },
+      { label: "방출조건", text: "중소기업 긴급 할인지원 및 외상·대여 방출 특례", spot: true, isBad: false, scanMsg: "✅ 조달청 공공비축 원자재 수급안정 기준 적격 대상" },
+      { label: "실수요 검증", text: "한전 산불피해지역 변압기 납품 계약 (가동률 95%)", spot: true, isBad: false, scanMsg: "✅ 전량 자체 공장 용해·가공 투입 확인 (전매·사재기 위험 0%)" },
+      { label: "기대효과", text: "원자재 조달원가 18% 절감 및 전력 복구 납기 준수", spot: false }
+    ],
+    subTitle: "📑 조달청 비축물자 실수요자 확인서",
+    subCode: "RESERVE-ALU-80T",
+    subFields: [
+      { label: "비축품목", text: "비철금속 6종 중 알루미늄 (순도 99.7% 이상)", spot: true, isBad: false, scanMsg: "✅ 조달청 비축기지 재고 여유분 즉시 출고 가능" },
+      { label: "전매금지 서약", text: "제3자 재판매 엄금 및 실생산 투입 확약", spot: false }
+    ],
+    sealText: "대한전력\n공장직인",
+    deltasApprove: { budget: +8, fairness: +6, innovation: +6, safety: +8 },
+    deltasReject:  { budget: -10, fairness: -6, innovation: -6, safety: -8 },
+    explainRight: "조달청 군산 비축기지의 알루미늄 80톤을 김정직 대표에게 긴급 방출하여 공급망 위기를 극복하고 산불 피해지역 전력 복구까지 완수했습니다!",
+    explainWrong: "원자재 난에 허덕이는 김정직 대표의 비축물자 방출 요청을 반려하여 국가 전력망 부품 납기가 지연되었습니다."
+  },
+
+  // -------------------- DAY 5: G-PASS 해외조달 진출 & 마스터 조달관 최종 관문 --------------------
+  {
+    day: 5,
+    caseNo: "KONEPS-2026-501",
+    charId: "chorong",
+    storyArcTag: "🌱 [이초롱 성장사다리 3/3 (완결)] 벤처나라 새싹에서 G-PASS 글로벌 수출 기업으로!",
+    policyTag: "G-PASS · 해외조달시장 진출 유망기업 지정",
+    skyMode: "day",
+    charType: "youth_founder",
+    speakerName: "이초롱 대표 (G-PASS 글로벌 도약)",
+    speakerOrg: "(주)네오센서 & 아쿠아퓨어텍",
+    speech: "심사관님!! DAY 1 벤처나라, DAY 3 혁신장터 시범구매로 키워주신 덕분에 국내 납품 42억 원을 달성했습니다! 이제 조달청 ‘G-PASS 기업’ 지정으로 UN·해외 조달시장에 K-기술을 수출하겠습니다!",
+    naraeHint: "[성장 사다리 최종 3단계] 감격스러워요! 실적 0건이던 이초롱 대표님이 이제 세계 시장에 도전해요. [국내 조달실적]과 [해외 인증현황]을 스캔해 날개를 달아주세요!",
+    shouldApprove: true,
+    mainFields: [
+      { label: "신청건명", text: "조달청 G-PASS 기업 지정 및 해외전시회 바이어 상담 지원", spot: false },
+      { label: "국내 조달실적", text: "벤처나라·혁신장터 통해 최근 납품 42억 원 (하자 0건)", spot: true, isBad: false, scanMsg: "✅ 나라장터 종합쇼핑몰 납품실적 및 계약이행도 최우수(AAA)" },
+      { label: "해외 인증현황", text: "미국 NSF 인증, CE 인증, 국제특허 6건 보유", spot: true, isBad: false, scanMsg: "✅ UN 조달본부(UNPD) 벤더 등록 기술요건 완벽 충족!" },
+      { label: "수출 목표액", text: "연간 800만 달러 (UN 및 해외 공공 안전·환경 사업)", spot: false }
+    ],
+    subTitle: "📑 G-PASS 해외조달 역량 평가서",
+    subCode: "GPASS-GLOBAL-01",
+    subFields: [
+      { label: "수출 잠재력", text: "조달청 해외조달정보센터 시장성 평가 94점", spot: true, isBad: false, scanMsg: "✅ K-조달 대표 수출 유망 품목 선정 완료" },
+      { label: "국산화율", text: "핵심 AI 센서 및 모듈 100% 국내 독자 제조", spot: false }
+    ],
+    sealText: "네오센서\n수출직인",
+    deltasApprove: { budget: +8, fairness: +6, innovation: +12, safety: +6 },
+    deltasReject:  { budget: -6, fairness: -6, innovation: -12, safety: -4 },
+    explainRight: "조달청 ‘기업 성장 사다리(벤처나라 → 혁신장터 → 우수조달 → G-PASS)’의 산증인인 이초롱 대표가 마침내 글로벌 조달시장 수출에 성공했습니다!",
+    explainWrong: "글로벌 경쟁력을 갖춘 이초롱 대표의 G-PASS 지정을 반려하여 K-조달 수출 기회를 놓쳤습니다."
+  },
+  {
+    day: 5,
+    caseNo: "KONEPS-2026-502",
+    charId: "cartel",
+    storyArcTag: "🕶️ [검은 그림자 카르텔 6/6 (최후의 발악)] 페이퍼컴퍼니 마하청 일망타진!",
+    policyTag: "시설공사 · 다단계 불법하도급 & 페이퍼컴퍼니 적발",
+    skyMode: "day",
+    charType: "shady_broker",
+    speakerName: "마하청 대표 (카르텔 최후의 행동책)",
+    speakerOrg: "(주)유령종합건설",
+    speech: "구전관 보스까지 감찰팀에 잡혀갔다니... 하, 하지만 이 88억짜리 어린이 스포츠센터 공사만 따내면 카르텔 자금을 회수할 수 있어! 기술자 자격증도 다 빌려왔다고!",
+    naraeHint: "[카르텔 최후의 발악] 검은 그림자 카르텔의 마지막 자금줄이에요! [건설기술자 현황]과 [하도급 계획서]를 스캔해 카르텔을 완전히 뿌리 뽑으세요!",
+    shouldApprove: false,
+    mainFields: [
+      { label: "입찰건명", text: "시립 어린이 복합체육센터 신축 시설공사", spot: false },
+      { label: "투찰금액", text: "88억 원 (적격심사 하한선 아슬아슬 투찰)", spot: false },
+      { label: "건설기술자 현황", text: "등록 기술자 6명 중 5명이 타 회사 이중취업(명의대여!)", spot: true, isBad: true, scanMsg: "🚨 [페이퍼컴퍼니 적발] 4대보험·건설기술인협회 DB 대조 결과 유령 인력!" },
+      { label: "하도급 계획서", text: "골조·전기·소방 주요 공정 90% 일괄 불법 재하도급 예정", spot: true, isBad: true, scanMsg: "🚨 [건설산업기본법 위반] 직접시공 의무 위반 및 부실시공 위험 극대!" }
+    ],
+    subTitle: "📑 조달청 시설공사 하도급지킴이 검증서",
+    subCode: "PAPER-CONST-99",
+    subFields: [
+      { label: "사무실 실사", text: "공유오피스 내 빈 책상 1개 (건설장비 전무)", spot: true, isBad: true, scanMsg: "🚨 조달청 불공정조달조사팀 현장 실사 부적격 판정!" },
+      { label: "하도급지킴이", text: "노무비 구분관리 계좌 개설 거부 이력", spot: false }
+    ],
+    sealText: "유령건설\n명의대여",
+    deltasApprove: { budget: -16, fairness: -18, innovation: -6, safety: -22 },
+    deltasReject:  { budget: +8, fairness: +12, innovation: +4, safety: +14 },
+    explainRight: "페이퍼컴퍼니 마하청까지 완벽히 적발·체포하면서 [검은 그림자 카르텔] 일당 6인이 전원 일망타진되었고 어린이 체육시설의 안전을 지켰습니다!",
+    explainWrong: "카르텔의 마지막 페이퍼컴퍼니를 승인하여 부실시공 위험과 공정성 추락을 불러왔습니다!"
+  },
+  {
+    day: 5,
+    caseNo: "KONEPS-2026-503",
+    charId: "jeongjik",
+    storyArcTag: "👑 [FINAL 대단원] 김정직(제조) × 이초롱(AI벤처) × 한클라우드(보안) 상생 컨소시엄!",
+    policyTag: "마스터 심사 · 차세대 AI 스마트 방재 플랫폼",
+    skyMode: "night",
+    charType: "ceo_suit",
+    speakerName: "김정직 & 이초롱 공동대표",
+    speakerOrg: "K-스마트조달 상생 컨소시엄 (중소·벤처 공동수급)",
+    speech: "심사관님, 대망의 15번째 마지막 안건입니다! 심사관님께서 지켜주신 저희 제조기업(김정직)과 AI 벤처(이초롱), 보안 클라우드(한클라우드)가 힘을 합쳐 국가 교량·터널 AI 안전관리망 구축에 나섰습니다!",
+    naraeHint: "[대단원의 피날레] 우리가 5일 동안 함께 키우고 지킨 정직한 기업들이 하나로 뭉쳤어요! 공동수급 협정서와 하도급지킴이 약정을 스캔하고 마스터 도장을 찍으세요!",
+    shouldApprove: true,
+    mainFields: [
+      { label: "입찰건명", text: "국가 핵심 교량·터널 AI 디지털트윈 상시 안전관리망 구축", spot: false },
+      { label: "계약방식", text: "김정직(제조) + 이초롱(AI벤처) + 한클라우드 적격 공동수급", spot: true, isBad: false, scanMsg: "✅ 중소·벤처 상생협력 공동수급체 구성 및 지분율 적법!" },
+      { label: "핵심기술 검증", text: "조달청 혁신제품 + GS인증 1등급 + 국산 AI NPU 탑재", spot: true, isBad: false, scanMsg: "✅ 100% 국내 직접생산 센서 및 KTL 극한환경 내구성 통과!" },
+      { label: "대금지급 투명성", text: "조달청 ‘하도급지킴이’ 연동 노무비·자재비 직불 약정", spot: true, isBad: false, scanMsg: "✅ 체불 제로(0) 전자대금지급시스템 연동 완료!" }
+    ],
+    subTitle: "📑 차세대 나라장터 종합 적격심사표",
+    subCode: "MASTER-KONEPS-15",
+    subFields: [
+      { label: "AI 종합판정", text: "담합위험 0.0% · 서류진위 100% · 기술점수 97.8점", spot: true, isBad: false, scanMsg: "✅ 차세대 나라장터 전 항목 만점 수준 적격 확인!" },
+      { label: "공공기여도", text: "시설물 붕괴 사고 사전예방 및 유지보수 예산 25% 절감", spot: false }
+    ],
+    sealText: "K스마트\n공식직인",
+    deltasApprove: { budget: +10, fairness: +10, innovation: +12, safety: +14 },
+    deltasReject:  { budget: -12, fairness: -12, innovation: -12, safety: -14 },
+    explainRight: "5일 동안 당신의 공정한 심사로 성장한 김정직·이초롱·한클라우드 상생 컨소시엄이 국가 AI 방재망을 완성하며, ‘전설의 마스터 조달관’ 서사가 찬란하게 막을 내렸습니다!",
+    explainWrong: "국가 핵심 AI 안전 인프라 적격 컨소시엄을 반려하여 아쉬움을 남겼습니다."
+  }
+];
+
+/* ============================================================================
+   2. GAME STATE & 8-BIT CHIPTUNE WEB AUDIO ENGINE
+   ============================================================================ */
+let state = {
+  currentIndex: 0,
+  gauges: {
+    budget: 75,
+    fairness: 75,
+    innovation: 70,
+    safety: 80
+  },
+  exp: 0,
+  level: 1,
+  lensActive: false,
+  scannedCount: 0,
+  totalSpotsInCase: 0,
+  uvChecked: false,
+  specialResolved: false,
+  patrolDroneActive: false,
+  confettiActive: false,
+  correctCount: 0,
+  streak: 0,
+  maxStreak: 0,
+  caseHistory: {},
+  bellFlashTick: 0,
+  decidedLock: false,
+  charWalkX: -40,
+  charTargetX: 122,
+  reactionMode: null,
+  interrogated: false,
+  tick: 0,
+  typingTimer: null,
+  bgmPlaying: false,
+  bgmInterval: null,
+  bgmStep: 0,
+  autoDemo: false,
+  autoDemoTimer: null
+};
+
+const SAVE_STORAGE_KEY = "koneps_pixel_a_campaign_v6";
+const ORIGINAL_CASE_LABELS = [
+  "DAY 1-1 · 스마트 가로등 (전자서명)",
+  "DAY 1-2 · 사무용 가구 (동일IP 담합)",
+  "DAY 1-3 · 화재감지 센서 (벤처나라)",
+  "DAY 2-1 · 교육용 태블릿 (택갈이 적발)",
+  "DAY 2-2 · 어린이집 세제 (위조 성적서)",
+  "DAY 2-3 · 무장애 민원대 (우수조달·장애인기업)",
+  "DAY 3-1 · 자율주행 탐지로봇 (혁신시제품)",
+  "DAY 3-2 · 행정포털 클라우드 (전관 브로커)",
+  "DAY 3-3 · 보이스피싱 탐지 AI (디지털서비스몰)",
+  "DAY 4-1 · 산불 진화드론 (재난 긴급조달)",
+  "DAY 4-2 · 구호 방진마스크 (재난 폭리·불량)",
+  "DAY 4-3 · 알루미늄 80톤 (공공비축 방출)",
+  "DAY 5-1 · 해수담수화 모듈 (G-PASS 해외진출)",
+  "DAY 5-2 · 어린이 체육센터 (페이퍼컴퍼니)",
+  "DAY 5-3 · AI 스마트 방재망 (최종 마스터 심사)"
+];
+
+function saveCampaignProgress() {
+  try {
+    const payload = {
+      currentIndex: state.currentIndex,
+      gauges: state.gauges,
+      exp: state.exp,
+      level: state.level,
+      correctCount: state.correctCount,
+      streak: state.streak,
+      maxStreak: state.maxStreak,
+      caseHistory: state.caseHistory
+    };
+    localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(payload));
+  } catch (e) {}
+  updateCaseJumpSelectLabels();
+}
+
+function loadCampaignProgress() {
+  try {
+    const raw = localStorage.getItem(SAVE_STORAGE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (!data || typeof data.currentIndex !== "number") return false;
+    state.currentIndex = Math.max(0, Math.min(CASES_DATA.length - 1, data.currentIndex));
+    if (data.gauges) state.gauges = Object.assign({ budget: 75, fairness: 75, innovation: 70, safety: 80 }, data.gauges);
+    state.exp = data.exp || 0;
+    state.level = data.level || 1;
+    state.correctCount = data.correctCount || 0;
+    state.streak = data.streak || 0;
+    state.maxStreak = data.maxStreak || 0;
+    state.caseHistory = data.caseHistory || {};
+    updateCaseJumpSelectLabels();
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function updateCaseJumpSelectLabels() {
+  const sel = document.getElementById("caseJumpSelect");
+  if (!sel) return;
+  Array.from(sel.options).forEach((opt, idx) => {
+    const base = ORIGINAL_CASE_LABELS[idx] || opt.textContent;
+    const h = state.caseHistory[idx];
+    if (h) {
+      opt.textContent = `${h.isCorrect ? "✅" : "⚠️"} ${base}`;
+    } else {
+      opt.textContent = base;
+    }
+  });
+}
+
+const JUDGE_RANKS = [
+  "Lv.1 수습 조달주사보",
+  "Lv.2 공정 조달주사",
+  "Lv.3 수석 혁신사무관",
+  "Lv.4 차세대 조달서기관",
+  "Lv.5 전설의 마스터 조달관"
+];
+
+function spawnFloatPopup(text, clientX, clientY, borderColor = "#f5b932") {
+  const el = document.createElement("div");
+  el.className = "float-popup";
+  el.textContent = text;
+  el.style.borderColor = borderColor;
+  const x = clientX || (window.innerWidth / 2);
+  const y = clientY || (window.innerHeight / 2);
+  el.style.left = `${ Math.max(80, Math.min(window.innerWidth - 80, x)) }px`;
+  el.style.top = `${ Math.max(60, Math.min(window.innerHeight - 60, y)) }px`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1050);
+}
+
+function gainExp(amount, labelText, evtX, evtY) {
+  state.exp += amount;
+  const newLevel = Math.min(5, Math.floor(state.exp / 100) + 1);
+  if (newLevel > state.level) {
+    state.level = newLevel;
+    play8BitSfx("fanfare");
+    spawnFloatPopup(`🎉 승진! ${JUDGE_RANKS[state.level - 1]}`, window.innerWidth / 2, 110, "#4ade80");
+  } else if (labelText) {
+    spawnFloatPopup(`${labelText} (+${amount} EXP)`, evtX, evtY);
+  }
+  renderJudgeRank();
+  saveCampaignProgress();
+}
+
+function renderJudgeRank() {
+  const pill = document.getElementById("judgeRankPill");
+  if (!pill) return;
+  const rankName = JUDGE_RANKS[state.level - 1] || JUDGE_RANKS[0];
+  const curLevelExp = state.exp % 100;
+  pill.textContent = `🎖️ ${rankName} (${state.level >= 5 ? 'MAX' : `EXP ${curLevelExp}/100`})`;
+}
+
+let audioCtx = null;
+
+function initAudio() {
+  if (!audioCtx) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContextClass();
+  }
+  if (audioCtx.state === "suspended") {
+    audioCtx.resume();
+  }
+}
+
+// Play 8-bit square/triangle/noise sound effects
+function play8BitSfx(type) {
+  try {
+    initAudio();
+    const now = audioCtx.currentTime;
+
+    if (type === "blip") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(520 + (Math.random() * 180), now);
+      gain.gain.setValueAtTime(0.035, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.045);
+    } else if (type === "bell") {
+      [1318.5, 1760].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, now + i * 0.07);
+        gain.gain.setValueAtTime(0.14, now + i * 0.07);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.25);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + i * 0.07);
+        osc.stop(now + i * 0.07 + 0.25);
+      });
+    } else if (type === "paper") {
+      const bufferSize = Math.floor(audioCtx.sampleRate * 0.08);
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+      }
+      const noise = audioCtx.createBufferSource();
+      const nGain = audioCtx.createGain();
+      noise.buffer = buffer;
+      nGain.gain.setValueAtTime(0.07, now);
+      nGain.gain.exponentialRampToValueAtTime(0.005, now + 0.08);
+      noise.connect(nGain);
+      nGain.connect(audioCtx.destination);
+      noise.start(now);
+    } else if (type === "lens_on") {
+      [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(freq, now + i * 0.045);
+        gain.gain.setValueAtTime(0.06, now + i * 0.045);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + (i + 1) * 0.045);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + i * 0.045);
+        osc.stop(now + (i + 1) * 0.045);
+      });
+    } else if (type === "scan_good") {
+      [659.25, 880, 1318.5].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(freq, now + i * 0.06);
+        gain.gain.setValueAtTime(0.11, now + i * 0.06);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + (i + 1) * 0.07);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + i * 0.06);
+        osc.stop(now + (i + 1) * 0.07);
+      });
+    } else if (type === "scan_bad") {
+      [220, 185, 146.8].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(freq, now + i * 0.08);
+        gain.gain.setValueAtTime(0.09, now + i * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + (i + 1) * 0.09);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + i * 0.08);
+        osc.stop(now + (i + 1) * 0.09);
+      });
+    } else if (type === "stamp") {
+      // Heavy 8-bit thud + noise burst
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(160, now);
+      osc.frequency.exponentialRampToValueAtTime(38, now + 0.18);
+      gain.gain.setValueAtTime(0.28, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.19);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.19);
+
+      // White noise impact
+      const bufferSize = audioCtx.sampleRate * 0.12;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const noise = audioCtx.createBufferSource();
+      const nGain = audioCtx.createGain();
+      noise.buffer = buffer;
+      nGain.gain.setValueAtTime(0.16, now);
+      nGain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+      noise.connect(nGain);
+      nGain.connect(audioCtx.destination);
+      noise.start(now);
+    } else if (type === "fanfare") {
+      const notes = [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5];
+      const durs  = [0.1, 0.1, 0.1, 0.2, 0.1, 0.35];
+      let t = now;
+      notes.forEach((n, idx) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(n, t);
+        gain.gain.setValueAtTime(0.08, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + durs[idx]);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + durs[idx]);
+        t += durs[idx] + 0.02;
+      });
+    }
+  } catch (e) {
+    // Ignore audio context restriction before user gesture
+  }
+}
+
+// 8-Bit Chiptune Loop Sequencer (Papers, Please + Upbeat Retro Mystery Theme)
+const MELODY_SEQ = [
+  220, 0, 261.63, 0, 329.63, 293.66, 261.63, 246.94,
+  220, 0, 196.00, 0, 220.00, 261.63, 329.63, 0,
+  349.23, 0, 329.63, 293.66, 261.63, 0, 246.94, 0,
+  220, 246.94, 261.63, 293.66, 329.63, 0, 196.00, 0
+];
+const BASS_SEQ = [
+  110, 110, 130.81, 130.81, 164.81, 164.81, 146.83, 123.47,
+  110, 110, 98.00, 98.00, 110.00, 130.81, 164.81, 164.81,
+  174.61, 174.61, 164.81, 146.83, 130.81, 130.81, 123.47, 123.47,
+  110, 110, 130.81, 146.83, 164.81, 164.81, 98.00, 110.00
+];
+
+function toggleBGM() {
+  initAudio();
+  state.bgmPlaying = !state.bgmPlaying;
+  const btn = document.getElementById("btnBgm");
+  if (state.bgmPlaying) {
+    btn.textContent = "🎵 8-BIT BGM: ON";
+    btn.classList.add("active-tool");
+    state.bgmStep = 0;
+    state.bgmInterval = setInterval(() => {
+      if (!state.bgmPlaying || !audioCtx) return;
+      const now = audioCtx.currentTime;
+      const mFreq = MELODY_SEQ[state.bgmStep % MELODY_SEQ.length];
+      const bFreq = BASS_SEQ[state.bgmStep % BASS_SEQ.length];
+
+      if (mFreq > 0) {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(mFreq, now);
+        g.gain.setValueAtTime(0.03, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+        osc.connect(g);
+        g.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.14);
+      }
+
+      if (bFreq > 0) {
+        const bOsc = audioCtx.createOscillator();
+        const bG = audioCtx.createGain();
+        bOsc.type = "triangle";
+        bOsc.frequency.setValueAtTime(bFreq, now);
+        bG.gain.setValueAtTime(0.05, now);
+        bG.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        bOsc.connect(bG);
+        bG.connect(audioCtx.destination);
+        bOsc.start(now);
+        bOsc.stop(now + 0.16);
+      }
+      state.bgmStep++;
+    }, 185);
+  } else {
+    btn.textContent = "🎵 8-BIT BGM: OFF";
+    btn.classList.remove("active-tool");
+    clearInterval(state.bgmInterval);
+  }
+}
+
+/* ============================================================================
+   3. PIXEL ART CANVAS RENDERER (UPPER BOOTH + CITY + CHARACTER + FAIRY NARAE)
+   ============================================================================ */
+const boothCanvas = document.getElementById("boothCanvas");
+const bCtx = boothCanvas.getContext("2d");
+bCtx.imageSmoothingEnabled = false;
+
+const naraeCanvas = document.getElementById("naraeCanvas");
+const nCtx = naraeCanvas.getContext("2d");
+nCtx.imageSmoothingEnabled = false;
+
+function pxRect(ctx, x, y, w, h, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(Math.floor(x), Math.floor(y), Math.floor(w), Math.floor(h));
+}
+
+function drawPixelScene() {
+  state.tick++;
+  const cData = CASES_DATA[state.currentIndex] || CASES_DATA[0];
+  const sky = cData.skyMode;
+
+  // 1. Sky Background inside Window
+  if (sky === "day") {
+    pxRect(bCtx, 0, 0, 320, 95, "#4a90e2");
+    pxRect(bCtx, 0, 0, 320, 26, "#357abd");
+    // Pixel sun
+    pxRect(bCtx, 256, 14, 16, 16, "#ffd03b");
+    pxRect(bCtx, 258, 12, 12, 20, "#fff275");
+  } else if (sky === "sunset") {
+    pxRect(bCtx, 0, 0, 320, 32, "#6c3483");
+    pxRect(bCtx, 0, 32, 320, 32, "#d35400");
+    pxRect(bCtx, 0, 64, 320, 31, "#f39c12");
+  } else if (sky === "night") {
+    pxRect(bCtx, 0, 0, 320, 95, "#14182e");
+    // Twinkling stars
+    const stars = [[30,15],[80,22],[145,12],[210,18],[275,25],[60,36],[190,32]];
+    stars.forEach(([sx, sy], idx) => {
+      if ((state.tick + idx * 7) % 30 < 22) {
+        pxRect(bCtx, sx, sy, 2, 2, "#fff");
+      }
+    });
+    // Pixel crescent moon
+    pxRect(bCtx, 260, 14, 12, 12, "#ffd03b");
+    pxRect(bCtx, 264, 14, 10, 10, "#14182e");
+  } else if (sky === "wildfire") {
+    pxRect(bCtx, 0, 0, 320, 35, "#4a0e0e");
+    pxRect(bCtx, 0, 35, 320, 35, "#96281b");
+    pxRect(bCtx, 0, 70, 320, 25, "#e67e22");
+    // Rising pixel embers & wildfire flames on mountain
+    for (let i = 0; i < 12; i++) {
+      const fx = (i * 27 + state.tick) % 300;
+      const fy = 82 - ((state.tick + i * 11) % 38);
+      pxRect(bCtx, fx, fy, 3, 3, i % 2 === 0 ? "#ffd03b" : "#ff3838");
+    }
+  }
+
+  // 2. Pixel Clouds
+  const cloudX1 = (40 + Math.floor(state.tick * 0.15)) % 340 - 20;
+  const cloudX2 = (190 + Math.floor(state.tick * 0.1)) % 340 - 20;
+  const cloudColor = sky === "wildfire" ? "#7f5555" : (sky === "night" ? "#2c3454" : "#ecf0f1");
+  pxRect(bCtx, cloudX1, 18, 26, 6, cloudColor);
+  pxRect(bCtx, cloudX1 + 4, 14, 16, 4, cloudColor);
+  pxRect(bCtx, cloudX2, 28, 32, 6, cloudColor);
+  pxRect(bCtx, cloudX2 + 6, 24, 18, 4, cloudColor);
+
+  // 3. Pixel Seoul / Sejong Government Complex Skyline Silhouette
+  const bldgs = [
+    [10, 48, 24, 48, "#2c3e50"],
+    [38, 38, 30, 58, "#34495e"],
+    [72, 54, 22, 42, "#283747"],
+    [175, 42, 28, 54, "#2c3e50"],
+    [206, 32, 34, 64, "#34495e"],
+    [244, 50, 26, 46, "#283747"],
+    [274, 40, 32, 56, "#1f2a36"]
+  ];
+  bldgs.forEach(([bx, by, bw, bh, bcol]) => {
+    pxRect(bCtx, bx, by, bw, bh, bcol);
+    // Lit pixel windows
+    for (let wy = by + 5; wy < 88; wy += 7) {
+      for (let wx = bx + 4; wx < bx + bw - 4; wx += 6) {
+        if ((wx + wy) % 3 !== 0) {
+          pxRect(bCtx, wx, wy, 3, 4, sky === "wildfire" ? "#ffcc66" : "#f9e79f");
+        }
+      }
+    }
+  });
+
+  // 4. Flying Delivery/Rescue Pixel Drone in Sky
+  const droneX = (state.tick * 1.1) % 340 - 15;
+  const droneY = 26 + Math.floor(Math.sin(state.tick * 0.12) * 4);
+  pxRect(bCtx, droneX, droneY, 12, 4, "#48dbfb");
+  pxRect(bCtx, droneX - 3, droneY - 2, 5, 2, (state.tick % 4 < 2) ? "#fff" : "#95a5a6");
+  pxRect(bCtx, droneX + 10, droneY - 2, 5, 2, (state.tick % 4 < 2) ? "#fff" : "#95a5a6");
+  pxRect(bCtx, droneX + 4, droneY + 4, 4, 3, "#ffd03b");
+
+  // 5. Booth Interior Frame & Partition Bars
+  pxRect(bCtx, 0, 0, 12, 140, "#2c2538");
+  pxRect(bCtx, 308, 0, 12, 140, "#2c2538");
+  pxRect(bCtx, 0, 0, 320, 8, "#1e1926");
+  // KONEPS Emblem plaque on upper wall
+  pxRect(bCtx, 14, 12, 58, 18, "#192a56");
+  pxRect(bCtx, 16, 14, 54, 14, "#273c75");
+  pxRect(bCtx, 20, 18, 6, 6, "#ffd03b");
+  pxRect(bCtx, 30, 19, 34, 4, "#ffffff");
+
+  // 6. Character Walking in, Idle, & Walking out Animation
+  if (state.charWalkX < state.charTargetX) {
+    state.charWalkX = Math.min(state.charTargetX, state.charWalkX + 4.5);
+  } else if (state.charWalkX > state.charTargetX) {
+    state.charWalkX = Math.max(state.charTargetX, state.charWalkX - 4.5);
+  }
+  const isWalking = Math.abs(state.charWalkX - state.charTargetX) > 0.5;
+  const bobY = isWalking
+    ? (Math.floor(state.tick / 3) % 2) * 2
+    : (Math.floor(state.tick / 18) % 2);
+
+  drawApplicantSprite(bCtx, state.charWalkX, 26 + bobY, cData.charType);
+
+  // 6.5 Patrol Drone (on Broker Arrest) or Confetti Stars (on Startup/Emergency Approval)
+  if (state.patrolDroneActive) {
+    const pdY = 24 + Math.floor(Math.sin(state.tick * 0.25) * 3);
+    const pdX = state.charWalkX + 54;
+    pxRect(bCtx, pdX, pdY, 22, 10, "#1e293b");
+    // Flashing Red & Blue Police Beacon
+    pxRect(bCtx, pdX + 3, pdY - 3, 6, 3, (state.tick % 6 < 3) ? "#ef4444" : "#3b82f6");
+    pxRect(bCtx, pdX + 13, pdY - 3, 6, 3, (state.tick % 6 < 3) ? "#3b82f6" : "#ef4444");
+    pxRect(bCtx, pdX - 4, pdY - 2, 6, 2, "#cbd5e1");
+    pxRect(bCtx, pdX + 20, pdY - 2, 6, 2, "#cbd5e1");
+    bCtx.fillStyle = "#f8fafc";
+    bCtx.font = "bold 6px monospace";
+    bCtx.fillText("PATROL", pdX + 1, pdY + 7);
+  }
+
+  if (state.confettiActive) {
+    const colors = ["#ffd03b", "#4ade80", "#38bdf8", "#f472b6"];
+    for (let i = 0; i < 10; i++) {
+      const cx = state.charWalkX - 10 + ((i * 11 + state.tick * 2) % 90);
+      const cy = 15 + ((i * 17 + state.tick * 2) % 70);
+      pxRect(bCtx, cx, cy, 3, 3, colors[i % colors.length]);
+    }
+  }
+
+  // 7. Booth Counter Desk & Interactive Props (No vertical bars blocking the view!)
+  pxRect(bCtx, 0, 94, 320, 8, "#5c3c24");
+  pxRect(bCtx, 0, 102, 320, 38, "#3d2718");
+
+  // Judge Nameplate on Left Counter ("심사관석")
+  pxRect(bCtx, 22, 86, 44, 10, "#243044");
+  pxRect(bCtx, 24, 88, 40, 6, "#f5b932");
+  // Red & Green Ink Stamp Pads on Right Counter
+  pxRect(bCtx, 244, 89, 22, 6, "#1e8e4e");
+  pxRect(bCtx, 270, 89, 22, 6, "#c93429");
+  // Small Desk Call Bell (Flashes when clicked!)
+  const bellGlowing = state.bellFlashTick > 0;
+  if (state.bellFlashTick > 0) state.bellFlashTick--;
+  pxRect(bCtx, 82, 89, 10, 5, bellGlowing ? "#ffffff" : "#f5b932");
+  pxRect(bCtx, 85, 87, 4, 2, bellGlowing ? "#fde047" : "#ffffff");
+  if (bellGlowing) {
+    pxRect(bCtx, 75, 73, 26, 11, "#f5b932");
+    bCtx.fillStyle = "#1e2430";
+    bCtx.font = "bold 7px monospace";
+    bCtx.fillText("DING!", 77, 81);
+  }
+
+  // Document slot on counter
+  pxRect(bCtx, 124, 96, 72, 5, "#141018");
+  if (!isWalking && state.charTargetX === 122) {
+    // Small pixel paper & sample folder being slid through the slot
+    pxRect(bCtx, 140, 91, 40, 9, "#f4eed7");
+    pxRect(bCtx, 145, 94, 30, 2, "#c0392b");
+    pxRect(bCtx, 145, 97, 22, 2, "#2980b9");
+  }
+
+  // 7.5 Character Reaction Overlay (Happy Jump, Panic Sweat, or Interrogation "💬?!")
+  if (state.reactionMode === "happy") {
+    const ry = 18 - (state.tick % 6);
+    pxRect(bCtx, state.charWalkX + 22, ry, 28, 11, "#1e8e4e");
+    bCtx.fillStyle = "#fff";
+    bCtx.font = "bold 8px monospace";
+    bCtx.fillText("THANK!", state.charWalkX + 24, ry + 8);
+  } else if (state.reactionMode === "panic") {
+    const rx = state.charWalkX + ((state.tick % 2) * 3 - 1);
+    pxRect(bCtx, rx + 20, 14, 30, 11, "#c93429");
+    bCtx.fillStyle = "#ffd03b";
+    bCtx.font = "bold 8px monospace";
+    bCtx.fillText("GASP!!", rx + 23, 22);
+  } else if (state.reactionMode === "question") {
+    const ry = 16 - (state.tick % 4);
+    pxRect(bCtx, state.charWalkX + 24, ry, 24, 11, "#2563eb");
+    bCtx.fillStyle = "#ffffff";
+    bCtx.font = "bold 8px monospace";
+    bCtx.fillText("? !", state.charWalkX + 30, ry + 8);
+  }
+
+  // 8. Draw AI Fairy 'Narae' on her dedicated 32x32 pixel canvas
+  drawNaraeSprite();
+
+  setTimeout(() => requestAnimationFrame(drawPixelScene), 42);
+}
+
+function drawApplicantSprite(ctx, x, y, charType) {
+  const cData = CASES_DATA[state.currentIndex] || CASES_DATA[0];
+  const isBlinking = (state.tick % 90) > 84;
+  const isSweating = charType === "shady_broker";
+  const isCartelBoss = (state.currentIndex === 7);
+
+  // If Final Case (Day 5-3 Consortium), draw co-representative Lee Chorong beside Kim Jeongjik!
+  if (state.currentIndex === 14) {
+    const cx2 = x + 46;
+    const cy2 = y + 3;
+    pxRect(ctx, cx2 + 12, cy2 + 59, 40, 8, "rgba(0,0,0,0.3)");
+    pxRect(ctx, cx2 + 12, cy2 + 38, 42, 28, "#16a085");
+    pxRect(ctx, cx2 + 26, cy2 + 38, 12, 14, "#ecf0f1");
+    pxRect(ctx, cx2 + 30, cy2 + 40, 4, 14, "#ffd03b");
+    pxRect(ctx, cx2 + 18, cy2 + 10, 30, 24, "#f5cba7");
+    pxRect(ctx, cx2 + 16, cy2 + 5, 34, 8, "#5c3828");
+    pxRect(ctx, cx2 + 15, cy2 + 9, 5, 12, "#5c3828");
+    pxRect(ctx, cx2 + 46, cy2 + 9, 5, 12, "#5c3828");
+    pxRect(ctx, cx2 + 22, cy2 + 17, 8, 4, "#fff");
+    pxRect(ctx, cx2 + 36, cy2 + 17, 8, 4, "#fff");
+    pxRect(ctx, cx2 + 24, cy2 + 18, 3, 3, "#111");
+    pxRect(ctx, cx2 + 38, cy2 + 18, 3, 3, "#111");
+    pxRect(ctx, cx2 + 28, cy2 + 27, 10, 2, "#900c3f");
+    // 3 G-PASS stars on Chorong's lapel
+    pxRect(ctx, cx2 + 15, cy2 + 43, 3, 3, "#ffd03b");
+    pxRect(ctx, cx2 + 19, cy2 + 43, 3, 3, "#ffd03b");
+    pxRect(ctx, cx2 + 23, cy2 + 43, 3, 3, "#ffd03b");
+  }
+
+  // Shadow
+  pxRect(ctx, x + 12, y + 62, 46, 8, "rgba(0,0,0,0.35)");
+
+  // Torso / Suit
+  let suitColor = "#2980b9";
+  let tieColor = "#e74c3c";
+  let hairColor = "#2c221e";
+
+  if (charType === "shady_broker") {
+    suitColor = isCartelBoss ? "#1e1b2e" : "#4b3832";
+    tieColor = isCartelBoss ? "#e11d48" : "#f1c40f";
+    hairColor = isCartelBoss ? "#64748b" : "#111111";
+  } else if (charType === "youth_founder") {
+    suitColor = "#16a085";
+    tieColor = "#ffd03b";
+    hairColor = "#5c3828";
+  } else if (charType === "emergency_chief") {
+    suitColor = "#d35400"; // Orange disaster response jacket
+    tieColor = "#f1c40f";
+    hairColor = "#2f3640";
+  }
+
+  // Shoulders & Suit
+  pxRect(ctx, x + 10, y + 40, 50, 30, suitColor);
+  // Shirt V-neck & Tie
+  pxRect(ctx, x + 28, y + 40, 14, 16, "#ecf0f1");
+  pxRect(ctx, x + 33, y + 42, 4, 16, tieColor);
+
+  // Character-Specific Lapel Badges (Growth Ladder Stars for Chorong / Craftsman Pin for Jeongjik / Boss Gold Chain for Gu Jeongwan)
+  if (cData.charId === "chorong") {
+    const starCount = cData.day === 1 ? 1 : (cData.day === 3 ? 2 : 3);
+    for (let s = 0; s < starCount; s++) {
+      pxRect(ctx, x + 14 + s * 4, y + 45, 3, 3, "#ffd03b");
+    }
+  } else if (cData.charId === "jeongjik") {
+    pxRect(ctx, x + 16, y + 45, 5, 5, "#38bdf8");
+    pxRect(ctx, x + 17, y + 46, 3, 3, "#ffd03b");
+  } else if (isCartelBoss) {
+    pxRect(ctx, x + 15, y + 45, 6, 4, "#f59e0b");
+  }
+
+  // Neck
+  pxRect(ctx, x + 28, y + 34, 14, 8, "#f5cba7");
+
+  // Head
+  pxRect(ctx, x + 18, y + 10, 34, 26, "#f5cba7");
+  // Ears
+  pxRect(ctx, x + 15, y + 18, 3, 8, "#e59866");
+  pxRect(ctx, x + 52, y + 18, 3, 8, "#e59866");
+
+  // Hair / Helmet
+  if (charType === "emergency_chief") {
+    // Safety Helmet
+    pxRect(ctx, x + 16, y + 3, 38, 10, "#f1c40f");
+    pxRect(ctx, x + 14, y + 11, 42, 3, "#d4ac0d");
+    pxRect(ctx, x + 31, y + 5, 8, 5, "#e74c3c"); // Rescue emblem
+  } else {
+    pxRect(ctx, x + 17, y + 5, 36, 9, hairColor);
+    pxRect(ctx, x + 16, y + 9, 5, 10, hairColor);
+    pxRect(ctx, x + 49, y + 9, 5, 10, hairColor);
+  }
+
+  // Eyes (with blink & shady shift, or dark sunglasses for Cartel Boss Gu Jeongwan)
+  const eyeShift = (charType === "shady_broker" && (Math.floor(state.tick / 20) % 2 === 1)) ? 2 : 0;
+  if (isCartelBoss) {
+    pxRect(ctx, x + 21, y + 17, 12, 6, "#0f172a");
+    pxRect(ctx, x + 37, y + 17, 12, 6, "#0f172a");
+    pxRect(ctx, x + 33, y + 18, 4, 2, "#f59e0b");
+    pxRect(ctx, x + 23, y + 18, 3, 2, "#38bdf8");
+    pxRect(ctx, x + 39, y + 18, 3, 2, "#38bdf8");
+  } else if (isBlinking) {
+    pxRect(ctx, x + 24, y + 20, 6, 2, "#111");
+    pxRect(ctx, x + 40, y + 20, 6, 2, "#111");
+  } else {
+    pxRect(ctx, x + 24, y + 18, 6, 5, "#fff");
+    pxRect(ctx, x + 40, y + 18, 6, 5, "#fff");
+    pxRect(ctx, x + 26 + eyeShift, y + 19, 3, 4, "#111");
+    pxRect(ctx, x + 42 + eyeShift, y + 19, 3, 4, "#111");
+  }
+
+  // Glasses for Youth Founder
+  if (charType === "youth_founder") {
+    pxRect(ctx, x + 22, y + 17, 10, 1, "#2c3e50");
+    pxRect(ctx, x + 38, y + 17, 10, 1, "#2c3e50");
+    pxRect(ctx, x + 32, y + 19, 6, 1, "#2c3e50");
+  }
+
+  // Mouth (Talking animation while typing)
+  const mouthOpen = (state.tick % 10 < 5) && state.typingTimer;
+  if (mouthOpen) {
+    pxRect(ctx, x + 31, y + 28, 8, 4, "#900c3f");
+  } else {
+    pxRect(ctx, x + 30, y + 29, 10, 2, "#7f4f24");
+  }
+
+  // Animated Pixel Sweat Drops for Shady Broker
+  if (isSweating) {
+    const dropY = (state.tick % 24) * 0.5;
+    pxRect(ctx, x + 50, y + 14 + dropY, 3, 5, "#48dbfb");
+    pxRect(ctx, x + 13, y + 16 + ((state.tick + 12) % 24) * 0.5, 3, 5, "#48dbfb");
+  }
+}
+
+function drawNaraeSprite() {
+  nCtx.clearRect(0, 0, 32, 32);
+  pxRect(nCtx, 0, 0, 32, 32, "#120e1f");
+
+  const wingFlap = Math.floor(state.tick / 6) % 2;
+  const hoverY = Math.floor(state.tick / 12) % 2;
+
+  // Pixel Hologram Wings
+  pxRect(nCtx, 3, 11 + wingFlap, 6, 9, "#48dbfb");
+  pxRect(nCtx, 23, 11 + wingFlap, 6, 9, "#48dbfb");
+
+  // Fairy Hair (Cyan/Blue Twin-tail)
+  pxRect(nCtx, 9, 5 + hoverY, 14, 6, "#00d2d3");
+  pxRect(nCtx, 7, 9 + hoverY, 3, 10, "#00d2d3");
+  pxRect(nCtx, 22, 9 + hoverY, 3, 10, "#00d2d3");
+
+  // Face
+  pxRect(nCtx, 10, 9 + hoverY, 12, 10, "#ffeaa7");
+  // Eyes
+  if (state.tick % 70 < 65) {
+    pxRect(nCtx, 12, 12 + hoverY, 2, 3, "#192a56");
+    pxRect(nCtx, 18, 12 + hoverY, 2, 3, "#192a56");
+  } else {
+    pxRect(nCtx, 12, 13 + hoverY, 2, 1, "#192a56");
+    pxRect(nCtx, 18, 13 + hoverY, 2, 1, "#192a56");
+  }
+
+  // Fairy Uniform Dress
+  pxRect(nCtx, 11, 19 + hoverY, 10, 8, "#ffd03b");
+  pxRect(nCtx, 14, 19 + hoverY, 4, 6, "#ffffff");
+
+  // Antenna Star
+  pxRect(nCtx, 15, 2 + hoverY, 2, 3, "#ffd03b");
+}
+
+/* ============================================================================
+   4. UI RENDERING, MAGNIFIER LENS, UV SEAL, DILEMMA & STAMP LOGIC
+   ============================================================================ */
+function renderGauges() {
+  const keys = ["budget", "fairness", "innovation", "safety"];
+  keys.forEach(k => {
+    const val = Math.max(0, Math.min(100, state.gauges[k]));
+    state.gauges[k] = val;
+    document.getElementById(`val-${k}`).textContent = `${val}점`;
+    const barEl = document.getElementById(`bar-${k}`);
+    barEl.innerHTML = `<div class="gauge-fill-smooth ${val <= 25 ? 'danger' : k}" style="width:${val}%"></div>`;
+  });
+}
+
+function renderQueueDots() {
+  const qEl = document.getElementById("dayQueueDots");
+  const done = state.currentIndex + 1;
+  const total = CASES_DATA.length;
+  const streakBadge = state.streak >= 2
+    ? `<span style="background:#f5b932; color:#1e2430; padding:1px 6px; border-radius:99px; font-size:11px;">🔥 ${state.streak}연속</span>`
+    : "";
+  qEl.innerHTML = `<span>${done}/${total}건</span> <span style="color:#58eb8e;">(적중 ${state.correctCount})</span> ${streakBadge}`;
+}
+
+function renderDeskChecklist() {
+  const listEl = document.getElementById("deskRuleList");
+  if (!listEl) return;
+  const cData = CASES_DATA[state.currentIndex];
+  listEl.innerHTML = "";
+
+  // 1. Policy theme header item
+  const themeLi = document.createElement("li");
+  themeLi.style.background = "rgba(245, 185, 50, 0.12)";
+  themeLi.style.borderColor = "rgba(245, 185, 50, 0.35)";
+  themeLi.innerHTML = `<div style="font-size:11px; color:#f5b932; font-weight:800;">📌 중점 심사 테마</div><div style="font-weight:700; color:#fff; margin-top:2px;">${cData.policyTag}</div>`;
+  listEl.appendChild(themeLi);
+
+  // 2. Dynamic Spot Checklist Items (Clicking also triggers scan!)
+  const spotElements = Array.from(document.querySelectorAll(".inspect-spot"));
+  let badFound = 0;
+
+  spotElements.forEach((sp, i) => {
+    const li = document.createElement("li");
+    const isScanned = sp.dataset.scanned === "1";
+    const isBad = sp.dataset.isBad === "1";
+    const labelText = sp.dataset.fieldLabel || `검증 항목 #${i + 1}`;
+
+    li.className = "check-spot-item" + (isScanned ? (isBad ? " done-bad" : " done-good") : "");
+    if (isScanned && isBad) badFound++;
+
+    const statusBadge = !isScanned
+      ? `<span style="color:#93c5fd; font-size:11px; font-weight:800;">[🔎 클릭스캔]</span>`
+      : (isBad
+          ? `<span style="color:#fca5a5; font-size:11px; font-weight:800;">🚨 위반적발</span>`
+          : `<span style="color:#86efac; font-size:11px; font-weight:800;">✅ 적격확인</span>`);
+
+    li.innerHTML = `<span><b>${i + 1}.</b> ${labelText}</span>${statusBadge}`;
+    li.onclick = (e) => inspectFieldSpot(sp, e);
+    listEl.appendChild(li);
+  });
+
+  // 2.5 UV Seal Verification Item in Checklist
+  const uvLi = document.createElement("li");
+  uvLi.className = "check-spot-item" + (state.uvChecked ? (cData.shouldApprove ? " done-good" : " done-bad") : "");
+  uvLi.innerHTML = `<span><b>🔦</b> 공식 직인 UV 감식</span>` + (
+    !state.uvChecked
+      ? `<span style="color:#c4b5fd; font-size:11px; font-weight:800;">[클릭감식(U)]</span>`
+      : (cData.shouldApprove
+          ? `<span style="color:#86efac; font-size:11px; font-weight:800;">🔒 진품직인</span>`
+          : `<span style="color:#fca5a5; font-size:11px; font-weight:800;">💀 위조직인</span>`)
+  );
+  uvLi.onclick = (e) => verifySealUV(e);
+  listEl.appendChild(uvLi);
+
+  // 3. Summary recommendation once all spots are scanned
+  if (state.scannedCount >= state.totalSpotsInCase && state.totalSpotsInCase > 0) {
+    const sumLi = document.createElement("li");
+    if (badFound > 0) {
+      sumLi.style.background = "rgba(239, 68, 68, 0.22)";
+      sumLi.style.borderColor = "#ef4444";
+      sumLi.innerHTML = `<b style="color:#fca5a5;">💡 AI 종합 소견:</b> 위조·위반 사항 <b>${badFound}건</b> 적발! 즉시 <b>[🆖 반려 도장]</b>을 찍으세요!`;
+    } else {
+      sumLi.style.background = "rgba(34, 197, 94, 0.22)";
+      sumLi.style.borderColor = "#22c55e";
+      sumLi.innerHTML = `<b style="color:#86efac;">💡 AI 종합 소견:</b> 모든 검증 항목 적격! <b>[🆗 승인 도장]</b>을 찍으세요!`;
+    }
+    listEl.appendChild(sumLi);
+  }
+}
+
+function updateSpecialEventUI() {
+  const box = document.getElementById("specialEventBox");
+  const txt = document.getElementById("specialEventText");
+  const btn = document.getElementById("specialEventBtn");
+  if (!box || state.specialResolved) {
+    if (box) box.className = "special-event-box";
+    return;
+  }
+  const cData = CASES_DATA[state.currentIndex];
+  if (state.scannedCount > 0 || state.interrogated || state.uvChecked) {
+    if (!cData.shouldApprove) {
+      box.className = "special-event-box show bribe";
+      txt.innerHTML = `💸 <b>[청탁 유혹]</b> "${cData.speakerName}: 눈감아주시면 뒷돈 사례하겠습니다..."`;
+      btn.textContent = "🚓 청탁 거절·고발 (+4 공정)";
+      btn.className = "pixel-btn red";
+    } else {
+      box.className = "special-event-box show fasttrack";
+      txt.innerHTML = `⚡ <b>[적극행정]</b> "${cData.speakerName}: 신속한 조달 특례 지원이 절실합니다!"`;
+      btn.textContent = "⚡ 직권 패스트트랙 (+3 혁신·안전)";
+      btn.className = "pixel-btn cyan";
+    }
+  } else {
+    box.className = "special-event-box";
+  }
+}
+
+function triggerSpecialAction() {
+  if (state.decidedLock || state.specialResolved) return;
+  state.specialResolved = true;
+  const cData = CASES_DATA[state.currentIndex];
+  const box = document.getElementById("specialEventBox");
+  if (box) box.className = "special-event-box";
+
+  const logBox = document.getElementById("lensLogBox");
+  if (!cData.shouldApprove) {
+    state.patrolDroneActive = true;
+    state.gauges.fairness = Math.min(100, state.gauges.fairness + 4);
+    state.gauges.budget = Math.min(100, state.gauges.budget + 2);
+    renderGauges();
+    play8BitSfx("fanfare");
+    gainExp(30, "🚓 청탁 거절 & 감찰 출동!", window.innerWidth * 0.72, 240);
+    const msg = `🚓 [청렴 감찰 발동] 브로커의 은밀한 청탁을 단호히 거절하고 공정조달 감찰드론을 호출했습니다! (⚖️공정 +4, 💰예산 +2)`;
+    logBox.innerHTML = `<div style="color:#4ade80; font-weight:800; margin-bottom:4px;">${msg}</div>` + logBox.innerHTML;
+    typeSpeechText(`"헉! 감찰드론까지 부르시다니! 잘못했습니다 심사관님!!"`);
+  } else {
+    state.confettiActive = true;
+    state.gauges.innovation = Math.min(100, state.gauges.innovation + 3);
+    state.gauges.safety = Math.min(100, state.gauges.safety + 3);
+    renderGauges();
+    play8BitSfx("fanfare");
+    gainExp(30, "⚡ 적극행정 특례 발동!", window.innerWidth * 0.72, 240);
+    const msg = `⚡ [적극행정 면책·패스트트랙 발동] 조달청장 직권 우대 트랙을 가동하여 납품 절차를 대폭 단축했습니다! (🚀혁신 +3, 🛡️안전 +3)`;
+    logBox.innerHTML = `<div style="color:#7dd3fc; font-weight:800; margin-bottom:4px;">${msg}</div>` + logBox.innerHTML;
+    typeSpeechText(`"와아! 조달청 적극행정 패스트트랙 지원이라니 정말 큰 힘이 됩니다!"`);
+  }
+}
+
+function verifySealUV(evt) {
+  if (state.decidedLock) return;
+  const cData = CASES_DATA[state.currentIndex];
+  const sealBox = document.getElementById("docSealBox");
+  if (!sealBox) return;
+
+  const firstTime = !state.uvChecked;
+  state.uvChecked = true;
+
+  const rect = sealBox.getBoundingClientRect();
+  const cx = (evt && evt.clientX) ? evt.clientX : (rect.left + rect.width / 2);
+  const cy = (evt && evt.clientY) ? evt.clientY : (rect.top);
+
+  if (cData.shouldApprove) {
+    sealBox.className = "pixel-seal-box uv-good";
+    sealBox.innerHTML = "🔒진품직인<br>블록체인OK";
+    play8BitSfx("scan_good");
+    if (firstTime) gainExp(15, "🔦 UV 진품 직인 확인!", cx, cy);
+  } else {
+    sealBox.className = "pixel-seal-box uv-bad";
+    sealBox.innerHTML = "💀위조직인<br>해시불일치";
+    play8BitSfx("scan_bad");
+    if (firstTime) gainExp(15, "🚨 UV 위조 직인 적발!", cx, cy);
+  }
+
+  const uvMsg = cData.shouldApprove
+    ? `🔦 [UV 전자직인 감식] 차세대 나라장터 블록체인 워터마크 일치 (진품 법인인감 확인)`
+    : `🚨 [UV 전자직인 감식] 비인가 스캔·복사본 위조 인감 적발! (블록체인 해시 불일치)`;
+
+  const logBox = document.getElementById("lensLogBox");
+  logBox.innerHTML = `<div style="color:${cData.shouldApprove ? '#c4b5fd' : '#fca5a5'}; font-weight:800; margin-bottom:4px;">${uvMsg}</div>` + logBox.innerHTML;
+
+  renderDeskChecklist();
+  updateSpecialEventUI();
+}
+
+function typeSpeechText(fullText) {
+  clearInterval(state.typingTimer);
+  const el = document.getElementById("speechBubbleText");
+  el.textContent = "";
+  let idx = 0;
+  state.typingTimer = setInterval(() => {
+    if (idx < fullText.length) {
+      el.textContent += fullText[idx];
+      if (idx % 3 === 0) play8BitSfx("blip");
+      idx++;
+    } else {
+      clearInterval(state.typingTimer);
+      state.typingTimer = null;
+    }
+  }, 22);
+}
+
+function loadCase(index) {
+  state.currentIndex = index;
+  state.decidedLock = false;
+  state.scannedCount = 0;
+  state.uvChecked = false;
+  state.specialResolved = false;
+  state.patrolDroneActive = false;
+  state.confettiActive = false;
+  state.charWalkX = -45;
+  state.charTargetX = 122;
+  state.reactionMode = null;
+  state.interrogated = false;
+  const sel = document.getElementById("caseJumpSelect");
+  if (sel) sel.value = String(index);
+  saveCampaignProgress();
+
+  const cData = CASES_DATA[index];
+  const caseInDay = (index % 3) + 1;
+
+  document.getElementById("dayStageBadge").textContent = `DAY ${cData.day} / 5 · CASE ${index + 1} / 15`;
+  document.getElementById("currentDayThemeBadge").textContent = `DAY ${cData.day} (${caseInDay}/3)`;
+  document.getElementById("speakerName").textContent = `👤 ${cData.speakerName}`;
+  document.getElementById("speakerOrg").textContent = cData.speakerOrg;
+  document.getElementById("naraePolicyTag").textContent = cData.policyTag;
+  document.getElementById("naraeHintText").textContent = cData.naraeHint;
+
+  // Update Story Arc Badge above Speaker Name
+  const arcBadge = document.getElementById("storyArcBadge");
+  if (arcBadge) {
+    arcBadge.textContent = cData.storyArcTag || `📌 DAY ${cData.day} 주요 안건`;
+    if (cData.charId === "cartel") {
+      arcBadge.style.background = "#fee2e2";
+      arcBadge.style.color = "#991b1b";
+      arcBadge.style.borderColor = "#ef4444";
+    } else if (cData.charId === "chorong") {
+      arcBadge.style.background = "#dcfce7";
+      arcBadge.style.color = "#166534";
+      arcBadge.style.borderColor = "#22c55e";
+    } else {
+      arcBadge.style.background = "#fef3c7";
+      arcBadge.style.color = "#92400e";
+      arcBadge.style.borderColor = "#f59e0b";
+    }
+  }
+
+  // Reset Stamp Mark & Seal Box
+  const inkEl = document.getElementById("rubberInkMark");
+  inkEl.className = "rubber-ink-mark";
+  const sealBox = document.getElementById("docSealBox");
+  if (sealBox) {
+    sealBox.className = "pixel-seal-box";
+    sealBox.innerHTML = cData.sealText.replace("\n", "<br>");
+  }
+
+  // Trigger Paper Slide-In Animation
+  ["mainBidSheet", "subCertSheet"].forEach(id => {
+    const sh = document.getElementById(id);
+    if (sh) {
+      sh.classList.remove("slide-in");
+      void sh.offsetWidth;
+      sh.classList.add("slide-in");
+    }
+  });
+  play8BitSfx("paper");
+
+  // Count total inspectable spots
+  const allSpots = [
+    ...cData.mainFields.filter(f => f.spot),
+    ...cData.subFields.filter(f => f.spot)
+  ];
+  state.totalSpotsInCase = allSpots.length;
+  updateScanProgressUI();
+  updateSpecialEventUI();
+
+  // Render Main Bid Sheet
+  document.getElementById("docBidNo").textContent = cData.caseNo;
+  const mainTable = document.getElementById("docMainTable");
+  mainTable.innerHTML = "";
+
+  cData.mainFields.forEach((f, idx) => {
+    const tr = document.createElement("tr");
+    const th = document.createElement("th");
+    th.textContent = f.label;
+    const td = document.createElement("td");
+
+    if (f.spot) {
+      const span = document.createElement("span");
+      span.className = "inspect-spot";
+      span.dataset.spotId = `main-${idx}`;
+      span.dataset.fieldLabel = f.label;
+      span.dataset.isBad = f.isBad ? "1" : "0";
+      span.dataset.scanMsg = f.scanMsg;
+      span.textContent = f.text;
+      span.onclick = (e) => inspectFieldSpot(span, e);
+      span.onmouseenter = () => hoverFieldSpot(span);
+      td.appendChild(span);
+    } else {
+      td.textContent = f.text;
+    }
+    tr.appendChild(th);
+    tr.appendChild(td);
+    mainTable.appendChild(tr);
+  });
+
+  // Render Secondary Certificate Sheet
+  document.getElementById("subCertTitle").textContent = cData.subTitle;
+  document.getElementById("subCertCode").textContent = cData.subCode;
+  const subTable = document.getElementById("docSubTable");
+  subTable.innerHTML = "";
+
+  cData.subFields.forEach((f, idx) => {
+    const tr = document.createElement("tr");
+    const th = document.createElement("th");
+    th.textContent = f.label;
+    const td = document.createElement("td");
+
+    if (f.spot) {
+      const span = document.createElement("span");
+      span.className = "inspect-spot";
+      span.dataset.spotId = `sub-${idx}`;
+      span.dataset.fieldLabel = f.label;
+      span.dataset.isBad = f.isBad ? "1" : "0";
+      span.dataset.scanMsg = f.scanMsg;
+      span.textContent = f.text;
+      span.onclick = (e) => inspectFieldSpot(span, e);
+      span.onmouseenter = () => hoverFieldSpot(span);
+      td.appendChild(span);
+    } else {
+      td.textContent = f.text;
+    }
+    tr.appendChild(th);
+    tr.appendChild(td);
+    subTable.appendChild(tr);
+  });
+
+  document.getElementById("lensLogBox").innerHTML =
+    `▶ <b>[${cData.caseNo}]</b> 서류의 파란색 <b>[🔎 항목]</b>을 클릭하거나 <b>[🔦 직인감식(U)]</b> · <b>[⚡ 일괄스캔(S)]</b>으로 진위를 판독하세요!`;
+
+  renderGauges();
+  renderQueueDots();
+  renderJudgeRank();
+  renderDeskChecklist();
+  typeSpeechText(`"${cData.speech}"`);
+}
+
+function highlightUnscannedSpots(active) {
+  const spots = document.querySelectorAll(".inspect-spot");
+  spots.forEach(sp => {
+    if (active && sp.dataset.scanned !== "1") {
+      sp.classList.add("hint-pulse");
+    } else {
+      sp.classList.remove("hint-pulse");
+    }
+  });
+}
+
+function handleBoothCanvasClick(evt) {
+  if (!boothCanvas) return;
+  const rect = boothCanvas.getBoundingClientRect();
+  const scaleX = boothCanvas.width / rect.width;
+  const scaleY = boothCanvas.height / rect.height;
+  const px = (evt.clientX - rect.left) * scaleX;
+  const py = (evt.clientY - rect.top) * scaleY;
+
+  // 1. Desk Call Bell (x: 74..98, y: 78..102)
+  if (px >= 74 && px <= 98 && py >= 78 && py <= 102) {
+    state.bellFlashTick = 18;
+    play8BitSfx("bell");
+    spawnFloatPopup("🔔 띵동! 창구 호출벨 타종", evt.clientX, evt.clientY, "#fde047");
+    if (!state.decidedLock) {
+      const cData = CASES_DATA[state.currentIndex];
+      typeSpeechText(`🔔 "${cData.speakerName}: 앗, 네 심사관님! 제 서류 바로 여기 있습니다! 잘 검토해 주십시오!"`);
+    }
+    return;
+  }
+
+  // 2. Judge Nameplate (x: 18..70, y: 80..102)
+  if (px >= 18 && px <= 70 && py >= 80 && py <= 102) {
+    play8BitSfx("lens_on");
+    const rankName = JUDGE_RANKS[state.level - 1] || JUDGE_RANKS[0];
+    spawnFloatPopup(`🎖️ ${rankName} · 누적 적중 ${state.correctCount}건`, evt.clientX, evt.clientY, "#38bdf8");
+    return;
+  }
+
+  // 3. Green Approve Stamp Pad on Counter (x: 240..268, y: 82..102)
+  if (px >= 240 && px <= 268 && py >= 82 && py <= 102) {
+    handleDecision(true);
+    return;
+  }
+
+  // 4. Red Reject Stamp Pad on Counter (x: 269..298, y: 82..102)
+  if (px >= 269 && px <= 298 && py >= 82 && py <= 102) {
+    handleDecision(false);
+    return;
+  }
+
+  // Default: Interrogate Applicant
+  interrogateApplicant();
+}
+
+function updateScanProgressUI() {
+  const progEl = document.getElementById("scanProgressText");
+  if (state.scannedCount >= state.totalSpotsInCase && state.totalSpotsInCase > 0) {
+    progEl.innerHTML = `✨ 스캔 완료 (${state.scannedCount}/${state.totalSpotsInCase}) · <b>정밀 감사 보너스(+2) 활성!</b>`;
+    progEl.style.color = "#58eb8e";
+  } else {
+    progEl.textContent = `🔎 AI 돋보기 스캔 진행률: ${state.scannedCount} / ${state.totalSpotsInCase} 항목 확인됨`;
+    progEl.style.color = "#f5b932";
+  }
+}
+
+// Toggle AI Pixel Magnifying Glass Mode
+function toggleLensMode(forceState) {
+  state.lensActive = (typeof forceState === "boolean") ? forceState : !state.lensActive;
+  document.body.classList.toggle("lens-mode", state.lensActive);
+  const btn = document.getElementById("btnToggleLens");
+  const stateLabel = document.getElementById("lensStateLabel");
+
+  if (state.lensActive) {
+    btn.classList.add("active");
+    btn.textContent = "🔍 돋보기 ON";
+    stateLabel.textContent = "렌즈 활성";
+    stateLabel.style.color = "#f5b932";
+    play8BitSfx("lens_on");
+  } else {
+    btn.classList.remove("active");
+    btn.textContent = "🔍 돋보기(F)";
+    stateLabel.textContent = "직접클릭 가능";
+    stateLabel.style.color = "#48dbfb";
+  }
+}
+
+function hoverFieldSpot(spanEl) {
+  if (!state.lensActive) return;
+  const hud = document.getElementById("lensHudText");
+  if (spanEl.dataset.scanned === "1") {
+    hud.textContent = spanEl.dataset.scanMsg;
+  } else {
+    hud.textContent = "클릭하여 AI 블록체인·빅데이터 진위 판독!";
+  }
+}
+
+function scanAllSpotsInstant() {
+  const spots = Array.from(document.querySelectorAll(".inspect-spot")).filter(s => s.dataset.scanned !== "1");
+  spots.forEach((sp, idx) => {
+    setTimeout(() => inspectFieldSpot(sp), idx * 120);
+  });
+  if (!state.uvChecked) {
+    setTimeout(() => verifySealUV(), spots.length * 120 + 60);
+  }
+}
+
+function inspectFieldSpot(spanEl, evt) {
+  if (!spanEl || spanEl.dataset.scanned === "1") return;
+
+  spanEl.dataset.scanned = "1";
+  spanEl.classList.remove("hint-pulse");
+  state.scannedCount++;
+  updateScanProgressUI();
+
+  const isBad = spanEl.dataset.isBad === "1";
+  const msg = spanEl.dataset.scanMsg;
+
+  const badge = document.createElement("span");
+  badge.className = `scan-badge ${isBad ? "bad" : "good"}`;
+  badge.textContent = isBad ? "위반/위조" : "적격인증";
+  spanEl.appendChild(badge);
+
+  const rect = spanEl.getBoundingClientRect();
+  const cx = (evt && evt.clientX) ? evt.clientX : (rect.left + rect.width / 2);
+  const cy = (evt && evt.clientY) ? evt.clientY : rect.top;
+
+  if (isBad) {
+    spanEl.classList.add("scanned-anomaly");
+    play8BitSfx("scan_bad");
+    gainExp(12, "🚨 위반 단서 포착!", cx, cy);
+  } else {
+    spanEl.classList.add("scanned-valid");
+    play8BitSfx("scan_good");
+    gainExp(10, "✅ 적격 단서 확인!", cx, cy);
+  }
+
+  document.getElementById("lensHudText").textContent = msg;
+  const logBox = document.getElementById("lensLogBox");
+  logBox.innerHTML = `<div style="color:${isBad ? '#fca5a5' : '#6ee7b7'}; font-weight:800; margin-bottom:4px;">${msg}</div>` + logBox.innerHTML;
+
+  renderDeskChecklist();
+  updateSpecialEventUI();
+}
+
+// Mouse follower for Pixel Lens
+window.addEventListener("mousemove", (e) => {
+  if (!state.lensActive) return;
+  const lens = document.getElementById("pixelLens");
+  lens.style.left = `${e.clientX}px`;
+  lens.style.top = `${e.clientY}px`;
+});
+
+// Interrogate Applicant (Click on Character or Press Q)
+function interrogateApplicant() {
+  if (state.decidedLock) return;
+  const cData = CASES_DATA[state.currentIndex];
+  const firstInterrogate = !state.interrogated;
+  state.interrogated = true;
+  state.reactionMode = "question";
+  setTimeout(() => {
+    if (!state.decidedLock && state.reactionMode === "question") {
+      state.reactionMode = null;
+    }
+  }, 1500);
+
+  play8BitSfx(cData.shouldApprove ? "scan_good" : "scan_bad");
+  if (firstInterrogate) {
+    gainExp(15, "💬 입찰자 심문 완료!", window.innerWidth * 0.35, 180);
+  }
+  const badSpots = [
+    ...cData.mainFields.filter(f => f.spot && f.isBad),
+    ...cData.subFields.filter(f => f.spot && f.isBad)
+  ];
+  let reply = "";
+  if (cData.shouldApprove) {
+    reply = `💬 [심문 답변] "${cData.speakerName}: 모든 증명서와 특허·공장 가동 기록은 차세대 나라장터 블록체인에 100% 실시간 연동되어 있습니다! 안심하고 승인해 주십시오!"`;
+  } else {
+    const clue = badSpots.length > 0 ? badSpots[0].label : "서류 항목";
+    reply = `💬 [심문 추궁] "${cData.speakerName}: 헉... 그, 글쎄 [${clue}] 쪽은 본사 직원이 실수한 것 같은데... 눈 좀 감아주시면 안 될까요?! (식은땀을 흘린다)"`;
+  }
+  typeSpeechText(reply);
+  const logBox = document.getElementById("lensLogBox");
+  logBox.innerHTML = `<div style="color:#fde047; font-weight:800; margin-bottom:4px;">${reply}</div>` + logBox.innerHTML;
+  updateSpecialEventUI();
+}
+
+window.addEventListener("keydown", (e) => {
+  const fbOpen = document.getElementById("feedbackModal").classList.contains("open");
+  if (fbOpen && (e.key === "Enter" || e.key === " ")) {
+    e.preventDefault();
+    proceedNextCase();
+    return;
+  }
+  if (document.querySelector(".modal-backdrop.open") || document.querySelector(".kpro-overlay.open")) return;
+  if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "SELECT")) return;
+  const k = e.key.toLowerCase();
+  if (k === "f") toggleLensMode();
+  else if (k === "u") verifySealUV();
+  else if (k === "s") scanAllSpotsInstant();
+  else if (k === "q") interrogateApplicant();
+  else if (k === "a") handleDecision(true);
+  else if (k === "r") handleDecision(false);
+});
+
+// Stamp Decision (Approve or Reject)
+function handleDecision(approved) {
+  if (state.decidedLock) return;
+  state.decidedLock = true;
+  highlightUnscannedSpots(false);
+
+  if (state.lensActive) toggleLensMode(false);
+
+  const piston = document.getElementById("stampPiston");
+  const pistonHead = document.getElementById("stampPistonHead");
+  const inkMark = document.getElementById("rubberInkMark");
+  const deskArea = document.getElementById("paperDeskArea");
+
+  pistonHead.textContent = approved ? "🆗 APPROVE" : "🆖 REJECT";
+  pistonHead.style.color = approved ? "#58eb8e" : "#ff7675";
+
+  // Slam down stamp piston + tactile desk shake
+  piston.classList.add("slamming");
+  if (deskArea) {
+    deskArea.classList.remove("stamp-shake");
+    void deskArea.offsetWidth;
+    deskArea.classList.add("stamp-shake");
+  }
+  play8BitSfx("stamp");
+
+  const cData = CASES_DATA[state.currentIndex];
+  const isCorrect = (approved === cData.shouldApprove);
+  state.reactionMode = approved ? "happy" : "panic";
+
+  if (isCorrect) {
+    if (approved) state.confettiActive = true;
+    else state.patrolDroneActive = true;
+    gainExp(40, "🎯 정확한 조달 판정!", window.innerWidth * 0.5, window.innerHeight * 0.55);
+  }
+
+  // Have the applicant walk out to the right (approved contract hall) or get escorted out to the left (rejected)
+  setTimeout(() => {
+    if (state.decidedLock) {
+      state.charTargetX = approved ? 335 : -65;
+    }
+  }, 420);
+
+  if (approved) {
+    typeSpeechText(cData.shouldApprove
+      ? `🎉 "${cData.speakerName}: 감사합니다 심사관님! 투명하고 성실하게 공공조달 계약을 이행하겠습니다!"`
+      : `😈 "${cData.speakerName}: 크크크, 속았구나! 대충 넘어가 줘서 고맙수다!"`);
+  } else {
+    typeSpeechText(!cData.shouldApprove
+      ? `💦 "${cData.speakerName}: 으악! 차세대 나라장터 AI 돋보기에 딱 걸렸네! 다음엔 정직하게 오겠습니다..."`
+      : `😢 "${cData.speakerName}: 헉, 저희는 모든 자격을 갖춘 적격 기업인데... 억울합니다 심사관님!"`);
+  }
+
+  setTimeout(() => {
+    inkMark.textContent = approved ? "승인 허가" : "반려 처분";
+    inkMark.className = `rubber-ink-mark ${approved ? "show-approve" : "show-reject"}`;
+  }, 120);
+
+  setTimeout(() => {
+    piston.classList.remove("slamming");
+  }, 320);
+
+  setTimeout(() => {
+    showDecisionResultModal(approved);
+  }, 1100);
+}
+
+const DAY_NEWSPAPER_HEADLINES = {
+  1: {
+    title: "📰 나라장터 데일리 호외 [DAY 1 마감 특보]",
+    headline: "차세대 나라장터 AI, ‘동일 IP 대리투찰’ 입찰담합 브로커 일망타진!",
+    sub: "블록체인 전자서명 정착 및 청년 창업기업 ‘벤처나라’ 시범설치 호평 이어져"
+  },
+  2: {
+    title: "📰 나라장터 데일리 호외 [DAY 2 마감 특보]",
+    headline: "해외 저가품 라벨 갈이 ‘유령공장 택갈이’ 및 위조 친환경 성적서 철퇴!",
+    sub: "중증장애인 표준사업장 ‘우수조달물품’ 무장애 민원대 전국 보급 확대"
+  },
+  3: {
+    title: "📰 나라장터 데일리 호외 [DAY 3 마감 특보]",
+    headline: "국산 자율주행 재난탐지 로봇, 조달청 ‘혁신시제품 시범구매’로 첫 실증 성공!",
+    sub: "전관 브로커 불법 수의계약 청탁 차단… 디지털서비스몰 AI 보안 클라우드 도입"
+  },
+  4: {
+    title: "📰 나라장터 데일리 호외 [DAY 4 마감 특보]",
+    headline: "동해안 산불 ‘긴급조달 패스트트랙’ 진화드론 20기 투입… 골든타임 사수!",
+    sub: "구호품 폭리 업자 고발 및 군산 비축기지 알루미늄 80톤 긴급방출로 공급망 수호"
+  }
+};
+
+function showDecisionResultModal(approved) {
+  const cData = CASES_DATA[state.currentIndex];
+  const isCorrect = (approved === cData.shouldApprove);
+  const fullScanBonus = isCorrect && (state.scannedCount >= state.totalSpotsInCase) ? 2 : 0;
+
+  if (isCorrect) {
+    state.correctCount++;
+    state.streak++;
+    if (state.streak > state.maxStreak) state.maxStreak = state.streak;
+    play8BitSfx("scan_good");
+  } else {
+    state.streak = 0;
+    play8BitSfx("scan_bad");
+  }
+
+  // Record in Audit Stamp Logbook
+  state.caseHistory[state.currentIndex] = {
+    approved,
+    isCorrect,
+    fullScan: fullScanBonus > 0
+  };
+
+  // End-of-day newspaper bonus (+2 to all gauges at end of Day 1..4)
+  const isEndOfDay = ((state.currentIndex + 1) % 3 === 0) && (state.currentIndex < CASES_DATA.length - 1);
+  const dayBonus = isEndOfDay ? 2 : 0;
+
+  const deltas = approved ? cData.deltasApprove : cData.deltasReject;
+  state.gauges.budget = Math.max(0, Math.min(100, state.gauges.budget + deltas.budget + fullScanBonus + dayBonus));
+  state.gauges.fairness = Math.max(0, Math.min(100, state.gauges.fairness + deltas.fairness + fullScanBonus + dayBonus));
+  state.gauges.innovation = Math.max(0, Math.min(100, state.gauges.innovation + deltas.innovation + fullScanBonus + dayBonus));
+  state.gauges.safety = Math.max(0, Math.min(100, state.gauges.safety + deltas.safety + fullScanBonus + dayBonus));
+  renderGauges();
+  renderQueueDots();
+  saveCampaignProgress();
+
+  // Save live progress & best score to localStorage for root launcher
+  const currentAvg = Math.round(
+    (state.gauges.budget + state.gauges.fairness + state.gauges.innovation + state.gauges.safety) / 4
+  );
+  if (window.KonepsPro && typeof KonepsPro.saveRecord === "function") {
+    KonepsPro.saveRecord({ bestScore: currentAvg });
+  }
+
+  const modal = document.getElementById("feedbackModal");
+  const head = document.getElementById("fbModalHead");
+  const body = document.getElementById("fbModalBody");
+  const btnNext = document.getElementById("btnNextCase");
+
+  head.innerHTML = isCorrect
+    ? `<span>✨ 정확한 조달 심사 판정! (${cData.caseNo})</span>`
+    : `<span>⚠️ 심사 판정 오류 주의보! (${cData.caseNo})</span>`;
+
+  const labelMap = {
+    budget: "💰 국가예산",
+    fairness: "⚖️ 공정지수",
+    innovation: "🚀 혁신성장",
+    safety: "🛡️ 국민안전"
+  };
+
+  let chipsHtml = "";
+  Object.keys(deltas).forEach(k => {
+    const v = deltas[k] + fullScanBonus + dayBonus;
+    if (v !== 0) {
+      chipsHtml += `<span class="delta-chip ${v > 0 ? 'pos' : 'neg'}">${labelMap[k]} ${v > 0 ? '+' + v : v}</span>`;
+    }
+  });
+
+  const bonusBannerHtml = fullScanBonus > 0
+    ? `<div style="margin-top:8px; font-size:12.5px; color:#86efac; font-weight:700;">🔎 [정밀 감사 보너스] 모든 서류 단서(100%) 스캔 후 정확 판정하여 전 지표 +2점 추가 달성! ${state.streak >= 2 ? `(🔥 ${state.streak}연속 적중!)` : ''}</div>`
+    : `<div style="margin-top:8px; font-size:12px; color:#fde047; font-weight:700;">💡 팁: 날인 전 서류의 파란색 [🔎 단서]를 모두 스캔(${state.scannedCount}/${state.totalSpotsInCase})하면 전 지표 +2점 정밀 감사 보너스가 추가됩니다!</div>`;
+
+  let newspaperHtml = "";
+  if (isEndOfDay && DAY_NEWSPAPER_HEADLINES[cData.day]) {
+    const news = DAY_NEWSPAPER_HEADLINES[cData.day];
+    newspaperHtml = `
+      <div style="margin-top:14px; background:#f8f4ea; color:#241f1c; border:2px solid #b8ad99; border-radius:12px; padding:12px 16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #3b352e; padding-bottom:4px; margin-bottom:6px; font-size:12px; font-weight:800; color:#7c2d12;">
+          <span>${news.title}</span>
+          <span>💵 일일 청렴 감사수당: 전 지표 +2 지급!</span>
+        </div>
+        <div style="font-size:15px; font-weight:900; color:#1e293b; margin-bottom:4px;">"${news.headline}"</div>
+        <div style="font-size:12.5px; color:#475569; font-weight:700;">▶ ${news.sub}</div>
+      </div>
+    `;
+  }
+
+  body.innerHTML = `
+    <div style="background:#1c2333; border:1px solid #3b4866; border-radius:12px; padding:14px 16px; margin-bottom:14px;">
+      <div style="font-size:12.5px; color:#7dd3fc; font-weight:800; margin-bottom:4px;">[${cData.policyTag}]</div>
+      <div style="font-size:16px; font-weight:800; color:${isCorrect ? '#4ade80' : '#f87171'};">
+        ${isCorrect ? "✔ 조달청 법령 기준에 부합하는 완벽한 처분입니다!" : "✖ 조달 심사 기준과 반대되는 도장을 찍었습니다!"}
+      </div>
+      <p style="margin:8px 0 0 0; color:#e2e8f0; line-height:1.55;">
+        ${isCorrect ? cData.explainRight : cData.explainWrong}
+      </p>
+      ${bonusBannerHtml}
+    </div>
+    <div style="font-weight:800; color:#f5b932; font-size:13.5px;">📊 4대 국가 조달 지표 변동:</div>
+    <div class="delta-chips">${chipsHtml}</div>
+    ${newspaperHtml}
+  `;
+
+  if (state.currentIndex >= CASES_DATA.length - 1) {
+    btnNext.textContent = "🏆 5일 완주 종합 평가 보기 (Enter) ▶";
+  } else if (isEndOfDay) {
+    btnNext.textContent = `🌅 DAY ${cData.day + 1} 업무 개시하기 (Enter) ▶`;
+  } else {
+    btnNext.textContent = "🔔 다음 입찰자 호출 (Enter) ▶";
+  }
+
+  modal.classList.add("open");
+}
+
+function proceedNextCase() {
+  const modal = document.getElementById("feedbackModal");
+  modal.classList.remove("open");
+
+  if (state.currentIndex >= CASES_DATA.length - 1) {
+    showFinalEndingModal();
+  } else {
+    const nextIdx = state.currentIndex + 1;
+    loadCase(nextIdx);
+    // Automatically show morning story episode when entering a new Day (Day 2..5) in manual play
+    if (!state.autoDemo && (nextIdx % 3 === 0)) {
+      const nextDay = CASES_DATA[nextIdx].day;
+      openStoryModal(nextDay);
+    }
+  }
+}
+
+function showFinalEndingModal() {
+  if (state.autoDemo) {
+    stopAutoDemo();
+  }
+  play8BitSfx("fanfare");
+
+  const modal = document.getElementById("feedbackModal");
+  const head = document.getElementById("fbModalHead");
+  const body = document.getElementById("fbModalBody");
+  const foot = document.getElementById("fbModalFoot");
+
+  const avgScore = Math.round(
+    (state.gauges.budget + state.gauges.fairness + state.gauges.innovation + state.gauges.safety) / 4
+  );
+
+  if (window.KonepsPro && typeof KonepsPro.saveRecord === "function") {
+    KonepsPro.saveRecord({ bestScore: avgScore, played: true });
+  }
+
+  let rankTitle = "🎖️ 전설의 도트 마스터 조달관 (S+ RANK)";
+  if (state.correctCount < 12) rankTitle = "🏅 숙련된 공정 조달 심사관 (A RANK)";
+  if (state.correctCount < 9) rankTitle = "📘 수습 조달 행정관 (B RANK)";
+
+  head.innerHTML = `<span>🏆 DAY 1 ~ DAY 5 대단원 완주! 조달청 최종 인사 명령서 & 에필로그</span>`;
+
+  body.innerHTML = `
+    <div style="text-align:center; padding:8px;">
+      <div style="font-size:42px; margin-bottom:6px;">🏆</div>
+      <div style="font-size:21px; font-weight:800; color:#f5b932;">
+        ${rankTitle}
+      </div>
+      <p style="color:#cbd5e1; margin:8px 0 12px 0;">
+        총 15건 중 <b>${state.correctCount}건</b> 정확 판정 (최대 <b>${state.maxStreak}연속</b> 적중) · 4대 국가지표 평균 <b>${avgScore}점</b> 달성!
+      </p>
+      <div style="background:#1c2333; border:1px solid #38bdf8; border-radius:12px; padding:12px 16px; text-align:left; margin-bottom:12px; font-size:13px; line-height:1.55;">
+        <div style="color:#fde047; font-weight:900; margin-bottom:4px;">🎬 [5일간의 서사 에필로그 : 기업 성장 사다리의 기적]</div>
+        <div style="color:#e2e8f0;">
+          • <b>🌱 이초롱 대표 (네오센서랩)</b>: "심사관님께서 DAY 1 벤처나라, DAY 3 혁신장터, DAY 5 G-PASS까지 공정하게 이끌어 주신 덕분에 UN 조달시장 첫 수출 계약을 체결했습니다!"<br>
+          • <b>🔧 김정직 대표 (대한전력부품)</b>: "군산 비축기지 알루미늄 80톤 긴급방출 덕분에 공장을 지키고 국가 AI 방재망까지 완수했습니다!"<br>
+          • <b>👨‍💼 강원칙 국장 & 🧚 AI 나래</b>: "구전관과 [검은 그림자 카르텔] 일당 6인은 전원 부정당업자 제재 및 사법 처리되었네. 자네야말로 대한민국 최고의 마스터 조달관일세!"
+        </div>
+      </div>
+      <div class="codex-grid" style="text-align:left;">
+        <div class="codex-item">
+          <h4>💰 최종 국가예산: ${state.gauges.budget}점</h4>
+          <p>입찰담합·재난폭리 차단 및 적정단가 검증으로 국민 세금을 수호했습니다.</p>
+        </div>
+        <div class="codex-item">
+          <h4>⚖️ 최종 공정지수: ${state.gauges.fairness}점</h4>
+          <p>직접생산 위반(택갈이), 위조 성적서, 페이퍼컴퍼니를 엄단했습니다.</p>
+        </div>
+        <div class="codex-item">
+          <h4>🚀 최종 혁신성장: ${state.gauges.innovation}점</h4>
+          <p>혁신장터 시범구매, 벤처나라, G-PASS 해외조달 진출로 강소기업을 육성했습니다.</p>
+        </div>
+        <div class="codex-item">
+          <h4>🛡️ 최종 국민안전: ${state.gauges.safety}점</h4>
+          <p>산불 재난 긴급조달 패스트트랙과 공공비축 원자재 방출로 위기를 극복했습니다.</p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  foot.innerHTML = `
+    <button class="pixel-btn cyan" onclick="openCastModal()">🎭 인물·서사 도감</button>
+    <button class="pixel-btn gold" onclick="openHistoryModal()">📒 심사기록장 열람</button>
+    <button class="pixel-btn cyan" onclick="KonepsPro.openCertificate()">🏅 명예 인증서 발급</button>
+    <button class="pixel-btn green" onclick="restartGame()">🔄 DAY 1부터 다시 플레이</button>
+  `;
+  modal.classList.add("open");
+}
+
+function restartGame() {
+  state.gauges = { budget: 75, fairness: 75, innovation: 70, safety: 80 };
+  state.exp = 0;
+  state.level = 1;
+  state.correctCount = 0;
+  state.streak = 0;
+  state.maxStreak = 0;
+  state.caseHistory = {};
+  try { localStorage.removeItem(SAVE_STORAGE_KEY); } catch (e) {}
+  updateCaseJumpSelectLabels();
+  document.getElementById("feedbackModal").classList.remove("open");
+  document.getElementById("fbModalFoot").innerHTML = `
+    <button class="pixel-btn gold" id="btnNextCase" onclick="proceedNextCase()">🔔 다음 입찰자 호출 (Enter) ▶</button>
+  `;
+  loadCase(0);
+}
+
+/* ============================================================================
+   5. POLICY CODEX, STORY EPISODES, CHARACTER DOSSIER & 1-MINUTE AUTO DEMO
+   ============================================================================ */
+function openCodexModal() {
+  document.getElementById("codexModal").classList.add("open");
+}
+function closeCodexModal() {
+  document.getElementById("codexModal").classList.remove("open");
+}
+
+function openStoryModal(dayNum) {
+  const cData = CASES_DATA[state.currentIndex] || CASES_DATA[0];
+  const d = dayNum || cData.day || 1;
+  const ch = STORY_CHAPTERS[d] || STORY_CHAPTERS[1];
+
+  document.getElementById("storyModalAct").textContent = `🎬 ${ch.act}`;
+  const body = document.getElementById("storyModalBody");
+
+  const linesHtml = ch.dialogue.map(line => `
+    <div style="background:#1c2333; border-left:4px solid #f5b932; border-radius:8px; padding:10px 14px; margin-bottom:8px; color:#f1f5f9; font-size:13.5px; line-height:1.55;">
+      ${line}
+    </div>
+  `).join("");
+
+  body.innerHTML = `
+    <div style="font-size:16px; font-weight:900; color:#fde047; margin-bottom:4px;">${ch.title}</div>
+    <div style="font-size:12px; color:#7dd3fc; font-weight:800; margin-bottom:12px;">🎙️ 등장인물: ${ch.speaker}</div>
+    ${linesHtml}
+    <div style="margin-top:12px; background:rgba(34,197,94,0.15); border:1px solid #22c55e; border-radius:10px; padding:10px 14px; color:#86efac; font-weight:800; font-size:13px;">
+      ${ch.objective}
+    </div>
+  `;
+
+  play8BitSfx("paper");
+  document.getElementById("storyModal").classList.add("open");
+}
+
+function closeStoryModal() {
+  document.getElementById("storyModal").classList.remove("open");
+}
+
+function openCastModal() {
+  const grid = document.getElementById("castGridBody");
+  if (!grid) return;
+  grid.innerHTML = "";
+
+  CHARACTER_DOSSIERS.forEach(char => {
+    const item = document.createElement("div");
+    item.className = "codex-item";
+
+    const caseButtonsHtml = char.appearCases.slice(0, 6).map(cIdx => {
+      const h = state.caseHistory[cIdx];
+      const mark = h ? (h.isCorrect ? "✅" : "⚠️") : "▶";
+      const cObj = CASES_DATA[cIdx];
+      return `<button class="pixel-btn" style="padding:3px 7px; font-size:11px; margin:2px;" onclick="closeCastModal(); loadCase(${cIdx});" title="클릭 시 해당 안건으로 즉시 이동">${mark} DAY ${cObj.day}-${(cIdx % 3) + 1}</button>`;
+    }).join("");
+
+    const clearedCount = char.appearCases.filter(cIdx => state.caseHistory[cIdx] && state.caseHistory[cIdx].isCorrect).length;
+
+    item.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <h4 style="margin:0;">${char.name}</h4>
+        <span style="background:#2b3548; color:#fde047; font-size:11px; font-weight:800; padding:2px 8px; border-radius:99px; border:1px solid #f5b932;">${char.badge} (${clearedCount}/${char.appearCases.length})</span>
+      </div>
+      <div style="font-size:11.5px; color:#93c5fd; font-weight:700; margin-bottom:6px;">${char.role}</div>
+      <p style="margin-bottom:8px;">${char.desc}</p>
+      <div style="border-top:1px solid #334155; padding-top:6px;">
+        <span style="font-size:11px; color:#cbd5e1; font-weight:800;">📌 등장 스테이지 바로가기:</span><br>
+        ${caseButtonsHtml}
+      </div>
+    `;
+    grid.appendChild(item);
+  });
+
+  document.getElementById("castModal").classList.add("open");
+}
+
+function closeCastModal() {
+  document.getElementById("castModal").classList.remove("open");
+}
+
+function openHistoryModal() {
+  const grid = document.getElementById("historyGridBody");
+  if (!grid) return;
+  grid.innerHTML = "";
+
+  CASES_DATA.forEach((c, idx) => {
+    const h = state.caseHistory[idx];
+    const card = document.createElement("div");
+    card.className = "history-card" + (h ? (h.isCorrect ? " done-ok" : " done-err") : "");
+    const statusHtml = !h
+      ? `<span style="color:#94a3b8; font-size:11.5px; font-weight:800;">⏳ 미심사 (클릭 이동)</span>`
+      : `<span style="color:${h.isCorrect ? '#4ade80' : '#f87171'}; font-size:11.5px; font-weight:800;">${h.approved ? '🆗승인' : '🆖반려'} (${h.isCorrect ? '적중✅' : '오판⚠️'}${h.fullScan ? '·🔎정밀' : ''})</span>`;
+
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <span style="font-size:11.5px; font-weight:900; color:#f5b932;">${c.caseNo}</span>
+        ${statusHtml}
+      </div>
+      <div style="font-size:13px; font-weight:800; color:#f8fafc; margin-bottom:2px;">${ORIGINAL_CASE_LABELS[idx]}</div>
+      <div style="font-size:11.5px; color:#93c5fd;">👤 ${c.speakerName} · ${c.speakerOrg}</div>
+    `;
+    card.onclick = () => {
+      closeHistoryModal();
+      document.getElementById("feedbackModal").classList.remove("open");
+      loadCase(idx);
+    };
+    grid.appendChild(card);
+  });
+
+  document.getElementById("historyModal").classList.add("open");
+}
+
+function closeHistoryModal() {
+  document.getElementById("historyModal").classList.remove("open");
+}
+
+function toggleAutoDemo() {
+  if (state.autoDemo) {
+    stopAutoDemo();
+  } else {
+    startAutoDemo();
+  }
+}
+
+function startAutoDemo() {
+  state.autoDemo = true;
+  document.getElementById("demoBanner").style.display = "block";
+  const btn = document.getElementById("btnAutoDemo");
+  btn.textContent = "⏹ 시연 모드 중지";
+  btn.classList.add("active-tool");
+
+  if (!state.bgmPlaying) {
+    toggleBGM();
+  }
+
+  runAutoDemoStep();
+}
+
+function stopAutoDemo() {
+  state.autoDemo = false;
+  clearTimeout(state.autoDemoTimer);
+  document.getElementById("demoBanner").style.display = "none";
+  const btn = document.getElementById("btnAutoDemo");
+  btn.textContent = "🎬 1분 자동 시연 모드";
+  btn.classList.remove("active-tool");
+}
+
+function runAutoDemoStep() {
+  if (!state.autoDemo) return;
+
+  // Step 1: Close any open modal if stuck
+  const fbModal = document.getElementById("feedbackModal");
+  if (fbModal.classList.contains("open")) {
+    if (state.currentIndex >= CASES_DATA.length - 1) {
+      stopAutoDemo();
+      return;
+    }
+    proceedNextCase();
+    state.autoDemoTimer = setTimeout(runAutoDemoStep, 900);
+    return;
+  }
+
+  // Step 2: Activate AI Magnifier and scan all un-scanned spots
+  if (!state.lensActive) {
+    toggleLensMode(true);
+  }
+
+  const unscanned = Array.from(document.querySelectorAll(".inspect-spot")).filter(
+    el => el.dataset.scanned !== "1"
+  );
+
+  if (unscanned.length > 0) {
+    const target = unscanned[0];
+    const rect = target.getBoundingClientRect();
+    const lens = document.getElementById("pixelLens");
+    lens.style.left = `${rect.left + rect.width / 2}px`;
+    lens.style.top = `${rect.top + rect.height / 2}px`;
+    inspectFieldSpot(target);
+    state.autoDemoTimer = setTimeout(runAutoDemoStep, 750);
+    return;
+  }
+
+  // Step 2.5: Verify UV Seal & Trigger Special Policy Action (Bribe Arrest / Fast-Track) during Demo!
+  if (!state.uvChecked) {
+    verifySealUV();
+    state.autoDemoTimer = setTimeout(runAutoDemoStep, 650);
+    return;
+  }
+  if (!state.specialResolved) {
+    triggerSpecialAction();
+    state.autoDemoTimer = setTimeout(runAutoDemoStep, 750);
+    return;
+  }
+
+  // Step 3: Stamp correct decision automatically
+  const cData = CASES_DATA[state.currentIndex];
+  handleDecision(cData.shouldApprove);
+
+  // Step 4: Advance after modal displays
+  state.autoDemoTimer = setTimeout(() => {
+    if (!state.autoDemo) return;
+    if (state.currentIndex < CASES_DATA.length - 1) {
+      proceedNextCase();
+      state.autoDemoTimer = setTimeout(runAutoDemoStep, 900);
+    } else {
+      stopAutoDemo();
+    }
+  }, 2100);
+}
+
+// Initialize Game on Window Load (Restores saved progress if available)
+window.addEventListener("DOMContentLoaded", () => {
+  const restored = loadCampaignProgress();
+  loadCase(restored ? state.currentIndex : 0);
+  requestAnimationFrame(drawPixelScene);
+});
+</script>
+<script>
+/* === MOBILE TOUCH & WEBAUDIO UNLOCK BRIDGE === */
+(function() {
+  // 1. Unlock WebAudio on first touchstart/click for iOS Safari & Android Chrome
+  function unlockAudio() {
+    try {
+      if (window.SoundEngine && SoundEngine.ctx && SoundEngine.ctx.state === 'suspended') {
+        SoundEngine.ctx.resume();
+      }
+      if (window.audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      if (window.sfx && sfx.ctx && sfx.ctx.state === 'suspended') {
+        sfx.ctx.resume();
+      }
+    } catch (e) {}
+  }
+  window.addEventListener('touchstart', unlockAudio, { passive: true });
+  window.addEventListener('click', unlockAudio, { passive: true });
+
+  // 2. Forward touchmove to mousemove (for magnifying lens / hover previews on mobile)
+  window.addEventListener('touchmove', function(e) {
+    if (!e.touches || !e.touches[0]) return;
+    const t = e.touches[0];
+    const mouseMoveEvt = new MouseEvent('mousemove', {
+      clientX: t.clientX,
+      clientY: t.clientY,
+      bubbles: true
+    });
+    t.target.dispatchEvent(mouseMoveEvt);
+  }, { passive: true });
+
+  // 3. Forward touchstart on canvas to mousemove so hover state updates before click
+  document.querySelectorAll('canvas').forEach(function(cv) {
+    cv.addEventListener('touchstart', function(e) {
+      if (!e.touches || !e.touches[0]) return;
+      const t = e.touches[0];
+      cv.dispatchEvent(new MouseEvent('mousemove', {
+        clientX: t.clientX,
+        clientY: t.clientY,
+        bubbles: true
+      }));
+    }, { passive: true });
+  });
+})();
+</script>
+<!-- === KONEPS PRO UPGRADE V2 START === -->
+<style>
+  #koneps-pro-dock {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    background: #1d2432;
+    border-bottom: 1px solid #364156;
+    padding: 6px 16px;
+    font-family: inherit;
+  }
+  .kpro-btn {
+    background: #2b3548;
+    color: #f1f5f9;
+    border: 1px solid #4a5a78;
+    border-radius: 7px;
+    padding: 5px 11px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background-color 0.15s, border-color 0.15s;
+    font-family: inherit;
+    text-decoration: none;
+  }
+  .kpro-btn:hover {
+    background: #3b4861;
+    border-color: #f5b932;
+    color: #fff;
+  }
+  .kpro-btn.quiz-highlight {
+    background: #b45309;
+    border-color: #f5b932;
+    color: #fff;
+  }
+  .kpro-btn.quiz-highlight:hover {
+    background: #d97706;
+  }
+  .kpro-btn.rec-active {
+    background: #dc2626 !important;
+    color: #fff !important;
+    border-color: #fca5a5 !important;
+  }
+
+  /* Intro & Pro Modals */
+  .kpro-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 20, 30, 0.8);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    font-family: inherit;
+  }
+  .kpro-overlay.open {
+    display: flex;
+  }
+  .kpro-modal {
+    background: #242c3d;
+    border: 1px solid #4a5878;
+    border-radius: 16px;
+    max-width: 680px;
+    width: 100%;
+    max-height: 92vh;
+    overflow-y: auto;
+    padding: 24px 26px;
+    color: #f1f5f9;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+    position: relative;
+  }
+  .kpro-badge {
+    display: inline-block;
+    background: rgba(245, 185, 50, 0.15);
+    border: 1px solid #f5b932;
+    color: #f5b932;
+    font-size: 11.5px;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+  }
+  .kpro-title {
+    font-size: clamp(20px, 2.5vw, 26px);
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 8px 0;
+  }
+  .kpro-sub {
+    font-size: 14px;
+    color: #cbd5e1;
+    line-height: 1.6;
+    margin-bottom: 18px;
+  }
+  .kpro-steps {
+    background: #1b2230;
+    border: 1px solid #354159;
+    border-left: 4px solid #f5b932;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: #e2e8f0;
+  }
+  .kpro-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    margin-top: 16px;
+  }
+  .kpro-cta {
+    padding: 10px 18px;
+    font-size: 13.5px;
+    font-weight: 800;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+    transition: filter 0.15s;
+  }
+  .kpro-cta:hover { filter: brightness(1.08); }
+  .kpro-cta.primary {
+    background: #f5b932;
+    color: #1e2430;
+  }
+  .kpro-cta.secondary {
+    background: #364156;
+    color: #fff;
+    border: 1px solid #4d5c78;
+  }
+  .kpro-quiz-opt {
+    width: 100%;
+    text-align: left;
+    background: #1b2230;
+    border: 1px solid #38455e;
+    color: #f1f5f9;
+    padding: 12px 14px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background-color 0.15s, border-color 0.15s;
+  }
+  .kpro-quiz-opt:hover {
+    background: #283247;
+    border-color: #f5b932;
+  }
+  .kpro-quiz-opt.correct {
+    background: rgba(34, 197, 94, 0.25) !important;
+    border-color: #22c55e !important;
+  }
+  .kpro-quiz-opt.wrong {
+    background: rgba(239, 68, 68, 0.25) !important;
+    border-color: #ef4444 !important;
+  }
+  #kpro-cert-canvas {
+    width: 100%;
+    height: auto;
+    border: 2px solid #f5b932;
+    border-radius: 10px;
+    margin-top: 10px;
+    background: #060913;
+  }
+  @media (max-width: 680px) {
+    .kpro-btn {
+      padding: 5px 8px;
+      font-size: 11px;
+    }
+  }
+</style>
+
+
+
+<!-- 1. Intro / Tutorial Briefing Overlay -->
+<div class="kpro-overlay" id="kpro-intro-modal">
+  <div class="kpro-modal">
+    <span class="kpro-badge">2026 조달청 AI 게임·콘텐츠 공모전 출품작 · 16-BIT STORY EDITION</span>
+    <h2 class="kpro-title">나라장터 조달관 심사소</h2>
+    <p class="kpro-sub">
+      <b>[서사 시나리오: ‘검은 그림자 카르텔’ 소탕 작전 &amp; 기업 성장 사다리]</b><br>
+      전관 브로커 총책 <b>‘구전관’</b>이 조종하는 불법 조달 조직의 음모를 5일간의 감사로 분쇄하고, 청년 창업가 <b>‘이초롱’</b>과 제조 장인 <b>‘김정직’</b>이 벤처나라·혁신장터를 거쳐 글로벌 <b>G-PASS 유니콘</b>으로 도약하도록 지켜내세요!
+    </p>
+    <div class="kpro-steps">
+      <div style="font-weight:800; color:#f5b932; margin-bottom:2px;">🎮 핵심 플레이 &amp; 서사 가이드 (마우스 클릭 &amp; 키보드 단축키 지원)</div>
+      <div>1️⃣ <b>서류 단서 스캔 &amp; UV 직인 감식</b>: 서류의 파란색 <b>[🔎 항목]</b> 클릭, <b>[🔦 직인감식 (U)]</b>, <b>[⚡ 일괄 스캔 (S)]</b>으로 카르텔의 위조·담합 꼬리를 잡으세요.</div>
+      <div>2️⃣ <b>입찰자 심문 &amp; 인물 서사 추적</b>: 창구 캐릭터나 <b>[💬 입찰자 심문 (Q)]</b>으로 추궁하고, 상단 <b>[🎭 인물·서사도감]</b>과 <b>[🎬 일차스토리]</b>에서 15개 사건의 연결고리를 확인하세요.</div>
+      <div>3️⃣ <b>고무도장 판정 (A / R)</b>: 단서 스캔 후 <b>[🆗 승인 도장 (A)]</b> 또는 <b>[🆖 반려 도장 (R)]</b>을 내려찍어 대한민국 공공조달의 정의를 세우세요!</div>
+    </div>
+    <div style="font-size:12.5px; color:#cbd5e1; background:#1b2230; border:1px solid #354159; padding:10px 12px; border-radius:8px;">
+      💡 <strong>심사위원 편의 기능</strong>: 상단 <strong>[📂 DAY 1-1 ~ 5-3]</strong> 드롭다운으로 15개 사건을 즉시 이동할 수 있으며, <strong>[🎬 일차스토리]</strong>·<strong>[🎭 인물·서사도감]</strong>·<strong>[📒 심사기록장]</strong>을 언제든 열람하실 수 있습니다.
+    </div>
+    <div class="kpro-actions">
+      <button class="kpro-cta secondary" onclick="KonepsPro.startWithDemo()">🎬 1분 자동 시연 모드로 보기</button>
+      <button class="kpro-cta secondary" onclick="KonepsPro.closeIntro(); openStoryModal(1);">📖 ACT 1 프롤로그 웹툰 보기</button>
+      <button class="kpro-cta primary" onclick="KonepsPro.closeIntro()">🚀 심사 업무 개시 (START GAME)</button>
+    </div>
+  </div>
+</div>
+
+<!-- 2. AI Procurement Golden Bell Quiz Modal -->
+<div class="kpro-overlay" id="kpro-quiz-modal">
+  <div class="kpro-modal">
+    <span class="kpro-badge">AI PROCUREMENT GOLDEN BELL · 정책 보너스 챌린지 (5문항)</span>
+    <h2 class="kpro-title">🎓 AI 조달정책 골든벨 (특별 예산·역량 보너스)</h2>
+    <p class="kpro-sub" style="margin-bottom:12px;">
+      조달청 핵심 정책 퀴즈 5문항을 풀면 즉시 인게임 특별 보상(<strong>4대 국정 조달 게이지 각각 +10점 회복!</strong>)이 지급됩니다!
+    </p>
+    <div id="kpro-quiz-body"></div>
+    <div class="kpro-actions">
+      <button class="kpro-cta secondary" onclick="KonepsPro.closeQuiz()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Official Certificate PNG Generator Modal -->
+<div class="kpro-overlay" id="kpro-cert-modal">
+  <div class="kpro-modal">
+    <span class="kpro-badge">OFFICIAL HONORARY CERTIFICATE · 대외 홍보·교육 인증서</span>
+    <h2 class="kpro-title">🏅 2026 조달청 AI 퀘스트 명예 인증서 발급</h2>
+    <p class="kpro-sub" style="margin-bottom:10px;">
+      이름(또는 팀명/닉네임)을 입력하면 현재 달성한 기록이 새겨진 고해상도 명예 인증서를 <strong>PNG 이미지로 즉시 다운로드</strong>할 수 있습니다.
+    </p>
+    <div style="display:flex; gap:8px; margin-bottom:8px;">
+      <input type="text" id="kpro-cert-name" placeholder="수여받을 성명 또는 팀명 입력 (예: 홍길동)" value="미래조달 마스터" style="flex:1; padding:10px 12px; border-radius:8px; border:1px solid #f5b932; background:#141923; color:#fff; font-weight:800; font-family:inherit;" oninput="KonepsPro.drawCertificate()" />
+      <button class="kpro-cta primary" onclick="KonepsPro.downloadCertificate()">💾 PNG 이미지 저장</button>
+    </div>
+    <canvas id="kpro-cert-canvas" width="900" height="540"></canvas>
+    <div class="kpro-actions">
+      <button class="kpro-cta secondary" onclick="KonepsPro.closeCertificate()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const KonepsPro = {
+  gameId: 'pixel_a',
+  gameTitle: '나라장터 조달관 심사소',
+  roleTitle: '전설의 마스터 조달관',
+  accent: '#ffd03b',
+  quizCompleted: false,
+  quizIndex: 0,
+  quizScore: 0,
+  mediaRecorder: null,
+  recordedChunks: [],
+  quizQuestions: [
+    {
+      q: "Q1. 공공부문이 혁신제품의 '첫 번째 구매자(First Buyer)'가 되어 초기 판로를 지원하고 국민 생활과 공공서비스를 개선하는 조달청 전용 플랫폼은?",
+      opts: ["① 혁신장터 (혁신시제품 시범구매 제도)", "② 일반 경매장터", "③ 중고물품 거래소", "④ 사설 부동산 장터"],
+      ans: 0,
+      exp: "정답은 ① 혁신장터입니다! 조달청은 혁신시제품을 선구매하여 공공기관 현장에서 실증(Test-bed) 기회를 제공합니다."
+    },
+    {
+      q: "Q2. 글로벌 공급망 위기나 원자재 가격 급등에 대비해 조달청이 구리·알루미늄·리튬 등 핵심 원자재와 긴급 물자를 사전에 확보해 두는 제도는?",
+      opts: ["① 공공비축 사업 (조달청 비축기지)", "② 개인 금고 보관제", "③ 무제한 수입 관세제", "④ 단기 로또 기금"],
+      ans: 0,
+      exp: "정답은 ① 공공비축 사업입니다! 조달청은 비축기지에 전략 원자재를 비축하여 위기 시 중소기업에 긴급 방출합니다."
+    },
+    {
+      q: "Q3. 기술력 있는 창업·벤처기업의 전용몰 '벤처나라'부터 국내 조달시장에서 검증된 유망기업의 해외조달시장 진출을 돕는 제도의 이름은?",
+      opts: ["① G-PASS (해외조달시장 진출 유망기업)", "② F-PASS (자유여행 패스)", "③ K-FOOD 패스", "④ 노패스(NO-PASS)"],
+      ans: 0,
+      exp: "정답은 ① G-PASS입니다! 조달청은 벤처나라 → 혁신제품 → 우수조달물품 → G-PASS로 이어지는 '기업 성장 사다리'를 운영합니다."
+    },
+    {
+      q: "Q4. 차세대 나라장터(KONEPS)에서 동일 IP 투찰, 낙찰하한가 담합 패턴 등 불공정 행위를 실시간 포착하는 지능형 시스템은?",
+      opts: ["① AI 입찰담합 분석 및 이상징후 탐지 시스템", "② 수기 종이장부 대조제", "③ 제비뽑기 추첨기", "④ 임의 수의계약제"],
+      ans: 0,
+      exp: "정답은 ① AI 입찰담합 분석 시스템입니다! 빅데이터와 AI로 대리 투찰 및 페이퍼컴퍼니 담합 징후를 정밀 색출합니다."
+    },
+    {
+      q: "Q5. 중소기업자간 경쟁제품을 낙찰받은 뒤 해외 저가 완제품의 라벨만 바꿔 국산으로 속여 납품하는 불공정 행위(일명 '택갈이')가 위반한 제도는?",
+      opts: ["① 직접생산 확인제도 위반", "② 도로교통법 주차 위반", "③ 국립공원 입장 규정", "④ 우편번호 표기 규정"],
+      ans: 0,
+      exp: "정답은 ① 직접생산 확인제도 위반입니다! 조달청은 스마트 전력 검침·관세청 수입통관 연계 등으로 불법 택갈이를 엄단합니다."
+    }
+  ],
+
+  init() {
+    // Save visit record to localStorage for Launcher Hub
+    this.saveRecord({ played: true });
+    // Show intro modal once per session unless hash is #skipintro
+    if (!sessionStorage.getItem('intro_seen_' + this.gameId) && location.hash !== '#skipintro') {
+      document.getElementById('kpro-intro-modal').classList.add('open');
+    }
+  },
+
+  saveRecord(updateObj) {
+    try {
+      const raw = localStorage.getItem('koneps_2050_records') || '{}';
+      const data = JSON.parse(raw);
+      const prev = data[this.gameId] || { played: false, quizCleared: false, certIssued: false, bestScore: 0 };
+      data[this.gameId] = Object.assign(prev, updateObj, { updatedAt: new Date().toISOString() });
+      localStorage.setItem('koneps_2050_records', JSON.stringify(data));
+    } catch (e) {}
+  },
+
+  openIntro() {
+    document.getElementById('kpro-intro-modal').classList.add('open');
+  },
+
+  closeIntro() {
+    sessionStorage.setItem('intro_seen_' + this.gameId, '1');
+    document.getElementById('kpro-intro-modal').classList.remove('open');
+  },
+
+  startWithDemo() {
+    this.closeIntro();
+    if (typeof toggleAutoDemo === 'function') {
+      toggleAutoDemo();
+    }
+  },
+
+  openQuiz() {
+    this.quizIndex = 0;
+    this.quizScore = 0;
+    document.getElementById('kpro-quiz-modal').classList.add('open');
+    this.renderQuizQuestion();
+  },
+
+  closeQuiz() {
+    document.getElementById('kpro-quiz-modal').classList.remove('open');
+  },
+
+  renderQuizQuestion() {
+    const box = document.getElementById('kpro-quiz-body');
+    if (this.quizIndex >= this.quizQuestions.length) {
+      const bonusMsg = this.quizCompleted
+        ? "이미 이번 세션에서 특별 보상을 수령하셨습니다! (복습 완료)"
+        : "🎉 축하합니다! 조달청 정책 골든벨 특별 보상이 게임에 즉시 지급되었습니다!";
+      if (!this.quizCompleted) {
+        this.quizCompleted = true;
+        this.applyGameReward();
+        this.saveRecord({ quizCleared: true });
+        const btn = document.getElementById('kpro-quiz-btn');
+        if (btn) btn.innerHTML = '✅ 골든벨완료';
+      }
+      box.innerHTML = `
+        <div style="background:rgba(16,185,129,0.16); border:2px solid #10b981; padding:18px; border-radius:8px; text-align:center;">
+          <div style="font-size:22px; font-weight:900; color:#34d399; margin-bottom:8px;">🏆 조달정책 골든벨 완주! (${this.quizScore} / ${this.quizQuestions.length} 정답)</div>
+          <div style="font-size:14px; color:#e2f8ee; margin-bottom:14px;">${bonusMsg}</div>
+          <button class="kpro-cta primary" onclick="KonepsPro.closeQuiz()">게임으로 돌아가기</button>
+        </div>
+      `;
+      return;
+    }
+    const item = this.quizQuestions[this.quizIndex];
+    box.innerHTML = `
+      <div style="font-size:15px; font-weight:900; color:#fff; margin-bottom:12px; line-height:1.5;">${item.q}</div>
+      <div id="kpro-opts">
+        ${item.opts.map((opt, idx) => `<button class="kpro-quiz-opt" onclick="KonepsPro.answerQuiz(${idx}, this)">${opt}</button>`).join('')}
+      </div>
+      <div id="kpro-quiz-exp" style="display:none; margin-top:10px; padding:12px; border-radius:6px; background:rgba(0,243,255,0.12); border:1px solid #ffd03b; font-size:13px; line-height:1.5;"></div>
+    `;
+  },
+
+  answerQuiz(idx, btnEl) {
+    const item = this.quizQuestions[this.quizIndex];
+    const allBtns = document.querySelectorAll('.kpro-quiz-opt');
+    allBtns.forEach(b => b.disabled = true);
+    if (idx === item.ans) {
+      btnEl.classList.add('correct');
+      this.quizScore++;
+    } else {
+      btnEl.classList.add('wrong');
+      if (allBtns[item.ans]) allBtns[item.ans].classList.add('correct');
+    }
+    const exp = document.getElementById('kpro-quiz-exp');
+    exp.style.display = 'block';
+    exp.innerHTML = `<div>${item.exp}</div><div style="text-align:right; margin-top:8px;"><button class="kpro-cta primary" style="padding:7px 14px; font-size:12px;" onclick="KonepsPro.quizIndex++; KonepsPro.renderQuizQuestion();">다음 문제 ➔</button></div>`;
+  },
+
+  applyGameReward() {
+    try {
+      // Game A (Cyber)
+      if (this.gameId === 'cyber_a' && typeof state !== 'undefined' && state.metrics) {
+        state.metrics.budget = Math.min(100, state.metrics.budget + 8);
+        state.metrics.fairness = Math.min(100, state.metrics.fairness + 8);
+        state.metrics.innovation = Math.min(100, state.metrics.innovation + 8);
+        state.metrics.safety = Math.min(100, state.metrics.safety + 8);
+        if (typeof updateGaugesUI === 'function') updateGaugesUI();
+        if (typeof addAuditLog === 'function') addAuditLog('🎓 [조달골든벨 달성] 4대 국정 조달 지표 +8 보너스 지급!');
+      }
+      // Game B (Cyber)
+      if (this.gameId === 'cyber_b' && typeof State !== 'undefined') {
+        State.budget += 300;
+        State.stock += 80;
+        State.score += 500;
+        if (typeof updateHUD === 'function') updateHUD();
+        if (typeof showToast === 'function') showToast('🎓 조달골든벨 보상: 예산 +300 / 비축물자 +80!');
+      }
+      // Game C (Cyber)
+      if (this.gameId === 'cyber_c' && typeof state !== 'undefined' && state.stats) {
+        state.capital = +(state.capital + 10).toFixed(1);
+        state.stats.tech = Math.min(100, state.stats.tech + 8);
+        state.stats.quality = Math.min(100, state.stats.quality + 8);
+        state.stats.green = Math.min(100, state.stats.green + 8);
+        state.stats.global = Math.min(100, state.stats.global + 8);
+        if (typeof updateUI === 'function') updateUI();
+      }
+      // Pixel A
+      if (this.gameId === 'pixel_a' && typeof state !== 'undefined' && state.gauges) {
+        state.gauges.budget = Math.min(100, state.gauges.budget + 10);
+        state.gauges.fairness = Math.min(100, state.gauges.fairness + 10);
+        state.gauges.innovation = Math.min(100, state.gauges.innovation + 10);
+        state.gauges.safety = Math.min(100, state.gauges.safety + 10);
+        if (typeof renderGauges === 'function') renderGauges();
+      }
+      // Pixel B
+      if (this.gameId === 'pixel_b' && typeof state !== 'undefined') {
+        state.budget += 350;
+        state.copper += 50;
+        state.lithium += 50;
+        state.safety = Math.min(100, state.safety + 15);
+        state.score += 500;
+      }
+      // Pixel C
+      if (this.gameId === 'pixel_c' && typeof GameState !== 'undefined') {
+        GameState.money += 3000;
+        GameState.tech = Math.min(100, GameState.tech + 15);
+        GameState.qual = Math.min(100, GameState.qual + 15);
+        GameState.esg = Math.min(100, GameState.esg + 15);
+        GameState.cred = Math.min(100, GameState.cred + 15);
+        if (typeof updateHUD === 'function') updateHUD();
+      }
+    } catch (e) {}
+  },
+
+  openCertificate() {
+    document.getElementById('kpro-cert-modal').classList.add('open');
+    this.saveRecord({ certIssued: true });
+    this.drawCertificate();
+  },
+
+  closeCertificate() {
+    document.getElementById('kpro-cert-modal').classList.remove('open');
+  },
+
+  getSummaryScoreText() {
+    try {
+      if (this.gameId === 'cyber_a' && typeof state !== 'undefined' && state.metrics) {
+        const avg = Math.round((state.metrics.budget + state.metrics.fairness + state.metrics.innovation + state.metrics.safety) / 4);
+        return `종합 국정 조달 지수: ${avg}점 (S+ 등급)`;
+      }
+      if (this.gameId === 'cyber_b' && typeof State !== 'undefined') {
+        return `작전 점수: ${State.score}점 | 도시 안전도: ${Math.round(State.safety)}%`;
+      }
+      if (this.gameId === 'cyber_c' && typeof state !== 'undefined') {
+        return `성장 단계: Stage ${state.stage} 달성 | 기업 자본: ${state.capital}억 원`;
+      }
+      if (this.gameId === 'pixel_a' && typeof state !== 'undefined' && state.gauges) {
+        const avg = Math.round((state.gauges.budget + state.gauges.fairness + state.gauges.innovation + state.gauges.safety) / 4);
+        return `도트 감사 종합 평점: ${avg}점 (MASTER 등급)`;
+      }
+      if (this.gameId === 'pixel_b' && typeof state !== 'undefined') {
+        return `방어 스코어: ${state.score} PTS | 도시 안전도: ${Math.round(state.safety)}%`;
+      }
+      if (this.gameId === 'pixel_c' && typeof GameState !== 'undefined') {
+        return `기업 단계: Stage ${GameState.stage} | 보유 자금: ${GameState.money.toLocaleString()}만 원`;
+      }
+    } catch (e) {}
+    return 'AI QUEST 마스터 미션 완수 (S+ RANK)';
+  },
+
+  drawCertificate() {
+    const cv = document.getElementById('kpro-cert-canvas');
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    const name = (document.getElementById('kpro-cert-name').value || '미래조달 마스터').trim();
+
+    // Background
+    const grad = ctx.createLinearGradient(0, 0, cv.width, cv.height);
+    grad.addColorStop(0, '#070b19');
+    grad.addColorStop(0.5, '#101b38');
+    grad.addColorStop(1, '#090d1e');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, cv.width, cv.height);
+
+    // Outer & Inner Borders
+    ctx.strokeStyle = this.accent;
+    ctx.lineWidth = 6;
+    ctx.strokeRect(22, 22, cv.width - 44, cv.height - 44);
+    ctx.strokeStyle = '#fcee0a';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(34, 34, cv.width - 68, cv.height - 68);
+
+    // Header
+    ctx.fillStyle = this.accent;
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('2026 조달청 AI 게임·콘텐츠 공모전 [AI QUEST : 조달의 미래를 PLAY하다]', cv.width / 2, 82);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 36px sans-serif';
+    ctx.fillText('명 예  조 달  마 스 터  인 증 서', cv.width / 2, 136);
+
+    // Recipient
+    ctx.fillStyle = '#fcee0a';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.fillText(`수여자 : ${name} 님`, cv.width / 2, 200);
+
+    // Role & Game Title
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = 'bold 19px sans-serif';
+    ctx.fillText(`임명 직책 : ${this.roleTitle}`, cv.width / 2, 248);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '16px sans-serif';
+    ctx.fillText(`완수 캠페인 : 《${this.gameTitle}》`, cv.width / 2, 282);
+
+    // Score Box
+    ctx.fillStyle = 'rgba(0, 243, 255, 0.1)';
+    ctx.fillRect(150, 306, cv.width - 300, 54);
+    ctx.strokeStyle = this.accent;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(150, 306, cv.width - 300, 54);
+    ctx.fillStyle = '#00ff9d';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillText(this.getSummaryScoreText(), cv.width / 2, 340);
+
+    // Citation body
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '15px sans-serif';
+    ctx.fillText('위 사람은 AI를 활용한 미래 공공조달 시뮬레이션을 통해 공정조달·혁신장터·공공비축·G-PASS 등', cv.width / 2, 402);
+    ctx.fillText('조달청의 핵심 정책 가치를 탁월하게 실현하였기에 이 명예 인증서를 수여합니다.', cv.width / 2, 428);
+
+    // Date & Stamp
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}. ${String(today.getMonth()+1).padStart(2,'0')}. ${String(today.getDate()).padStart(2,'0')}.`;
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = 'bold 15px sans-serif';
+    ctx.fillText(dateStr, cv.width / 2, 466);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 20px sans-serif';
+    ctx.fillText('2026 미래조달 AI 퀘스트 통합지휘본부', cv.width / 2, 496);
+
+    // Red Official Seal
+    ctx.save();
+    ctx.translate(cv.width / 2 + 185, 482);
+    ctx.rotate(-0.12);
+    ctx.strokeStyle = '#ff2a55';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(-34, -34, 68, 68);
+    ctx.fillStyle = 'rgba(255, 42, 85, 0.18)';
+    ctx.fillRect(-34, -34, 68, 68);
+    ctx.fillStyle = '#ff2a55';
+    ctx.font = '900 13px sans-serif';
+    ctx.fillText('AI조달청', 0, -6);
+    ctx.fillText('인증직인', 0, 14);
+    ctx.restore();
+  },
+
+  downloadCertificate() {
+    this.drawCertificate();
+    const cv = document.getElementById('kpro-cert-canvas');
+    const name = (document.getElementById('kpro-cert-name').value || '미래조달마스터').trim();
+    const link = document.createElement('a');
+    link.download = `2026조달청AI공모전_명예인증서_${this.gameId}_${name}.png`;
+    link.href = cv.toDataURL('image/png');
+    link.click();
+  },
+
+  toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  },
+
+  async toggleRecording() {
+    const btn = document.getElementById('kpro-rec-btn');
+    if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+      this.mediaRecorder.stop();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: 30 },
+        audio: true
+      });
+      this.recordedChunks = [];
+      this.mediaRecorder = new MediaRecorder(stream);
+      this.mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) this.recordedChunks.push(e.data);
+      };
+      this.mediaRecorder.onstop = () => {
+        const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `AI게임_시연영상_${this.gameTitle.replace(/[^가-힣a-zA-Z0-9]/g, '')}_출품용.webm`;
+        a.click();
+        stream.getTracks().forEach(t => t.stop());
+        if (btn) {
+          btn.classList.remove('rec-active');
+          btn.innerHTML = '🔴 시연녹화';
+        }
+      };
+      this.mediaRecorder.start();
+      if (btn) {
+        btn.classList.add('rec-active');
+        btn.innerHTML = '⏹ 녹화중지(저장)';
+      }
+    } catch (err) {
+      alert('화면 녹화를 시작하려면 브라우저 팝업에서 [현재 탭]을 선택해 공유해 주세요!');
+    }
+  }
+};
+
+window.addEventListener('DOMContentLoaded', () => KonepsPro.init());
+</script>
+<!-- === KONEPS PRO UPGRADE V2 END === -->
+</body>
+</html>

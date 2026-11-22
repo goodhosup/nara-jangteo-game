@@ -1,7 +1,8 @@
 # 🏛️ 나라장터 조달관 심사소 (PAPERS, KONEPS!)
 
 > **2026 조달청 AI 게임·콘텐츠 공모전 출품작**  
-> **🌐 웹 바로 플레이 (GitHub Pages)**: **[https://goodhosup.github.io/nara-jangteo-game/](https://goodhosup.github.io/nara-jangteo-game/)**
+> **🌐 웹 바로 플레이 (GitHub Pages)**: **[https://goodhosup.github.io/nara-jangteo-game/](https://goodhosup.github.io/nara-jangteo-game/)**  
+> **▲ Vercel 원클릭 배포**: [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/import?s=https%3A%2F%2Fgithub.com%2Fgoodhosup%2Fnara-jangteo-game)
 
 ---
 
